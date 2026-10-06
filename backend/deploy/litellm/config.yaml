@@ -1,0 +1,57 @@
+# LiteLLM Proxy 配置（独立服务形态的网关）
+#
+# 项目主用的是**进程内 Router**（app/agent/gateway.py），配置来自管理后台、改完即时生效。
+# 这份 YAML 是等价的独立服务形态：适合需要把网关拆成单独容器、供多个服务共用时。
+#
+# 用法：
+#   pip install 'litellm[proxy]'
+#   litellm --config deploy/litellm/config.yaml --port 4000
+# 然后把管理后台的 Base URL 指向 http://127.0.0.1:4000/v1，模型名填 model_name。
+
+model_list:
+  # 云端主力：能力强，按量计费
+  - model_name: cloud-deepseek
+    litellm_params:
+      model: openai/deepseek-flash
+      api_base: https://opencode.ai/zen/go/v1
+      api_key: os.environ/OPENCODE_API_KEY
+      # 网关要求客户端标识与会话头（见 app/agent/llm.py 的模块说明）
+      extra_headers:
+        User-Agent: OfferMind/0.1
+      extra_body:
+        thinking:
+          type: disabled
+    model_info:
+      mode: chat
+      tier: complex          # 自定义标记：难任务走这里
+
+  # 本地兜底：微调后的小模型，便宜、不怕限流，质量弱一些
+  - model_name: local-qwen
+    litellm_params:
+      model: openai/Qwen2.5-1.5B-Instruct
+      api_base: http://127.0.0.1:8001/v1
+      api_key: EMPTY
+      extra_body:
+        thinking:
+          type: disabled
+    model_info:
+      mode: chat
+      tier: simple
+
+router_settings:
+  # 云端挂了自动降级到本地，而不是把错误抛给用户
+  fallbacks:
+    - cloud-deepseek: ["local-qwen"]
+  num_retries: 2
+  timeout: 120
+  # 同一 key 的请求尽量落到同一部署，配合 prompt 缓存
+  routing_strategy: usage-based-routing-v2
+  allowed_fails: 3
+  cooldown_time: 30
+
+litellm_settings:
+  drop_params: true          # 忽略部署不支持的参数，而不是报错
+  set_verbose: false
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY

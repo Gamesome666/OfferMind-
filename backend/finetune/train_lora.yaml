@@ -1,0 +1,59 @@
+# 评分器 LoRA 微调配置（LLaMA-Factory）
+#
+# 目标：让本地小模型学会按四维 rubric 输出与 schemas.GradeOutput 一致的结构化 JSON。
+# 用法：llamafactory-cli train finetune/train_lora.yaml
+#
+# 选 Qwen2.5-1.5B-Instruct 的理由：中文强、1.5B 单卡可训、量化后能塞进消费级显卡，
+# 且体积小到能用 vLLM 起本地服务（见第 2 项：vLLM + LiteLLM 网关）。
+
+### 模型
+model_name_or_path: Qwen/Qwen2.5-1.5B-Instruct
+trust_remote_code: true
+
+### 训练阶段
+stage: sft
+do_train: true
+finetuning_type: lora
+
+### LoRA 参数
+# 1.5B 模型用 r=16 足够；target=all 让注意力+MLP 都参与，结构化输出任务上比只调 q_proj/v_proj 明显好
+lora_rank: 16
+lora_alpha: 32
+lora_dropout: 0.05
+lora_target: all
+
+### 数据集
+dataset: offermind_grader
+dataset_dir: finetune
+template: qwen
+# 评分 prompt 含题干+参考答案+作答+量表，通常 1500-2500 token；4096 留足余量
+cutoff_len: 4096
+# 样本少的时候全量过一遍比抽样更能收敛
+max_samples: null
+overwrite_cache: true
+preprocessing_num_workers: 4
+
+### 输出
+output_dir: finetune/output/qwen2.5-1.5b-grader
+logging_steps: 5
+save_steps: 100
+plot_loss: true
+overwrite_output_dir: true
+report_to: none
+
+### 训练超参
+per_device_train_batch_size: 2
+gradient_accumulation_steps: 8
+learning_rate: 1.0e-4
+num_train_epochs: 3.0
+lr_scheduler_type: cosine
+warmup_ratio: 0.1
+bf16: true
+# 数据量小时梯度累积是稳定训练的关键：等效 batch = 2 * 8 = 16
+gradient_checkpointing: true
+
+### 验证
+val_size: 0.1
+per_device_eval_batch_size: 1
+eval_strategy: steps
+eval_steps: 50

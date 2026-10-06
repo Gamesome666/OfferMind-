@@ -1,0 +1,17 @@
+{
+  "offermind_grader": {
+    "file_name": "data/grader_sft.jsonl",
+    "formatting": "alpaca",
+    "columns": {
+      "prompt": "instruction",
+      "response": "output",
+      "system": "system"
+    },
+    "tags": {
+      "role_tag": "",
+      "content_tag": "",
+      "user_tag": "",
+      "assistant_tag": ""
+    }
+  }
+}
