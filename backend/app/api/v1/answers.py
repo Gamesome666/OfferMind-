@@ -29,6 +29,10 @@ async def _to_out(db: AsyncSession, row: Answer) -> dict:
         "id": row.id,
         "question_id": row.question_id,
         "question_content": (question.content if question else "") or "",
+        # 联表顺带带出方向/难度/题型：列表页要显示这三个标签，不带的话前端得为每条再查一次题
+        "question_direction": (question.direction if question else "") or "",
+        "question_difficulty": (question.difficulty if question else "") or "",
+        "question_type": (question.question_type if question else "") or "",
         "answer_content": row.content,
         "score_json": score,
         "total_score": float(score.get("total_score") or 0.0),

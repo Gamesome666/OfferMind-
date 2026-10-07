@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>工作台 · OfferMind</title>
+<link rel="stylesheet" href="assets/tokens.css" />
+<style>
+  .due-item {
+    display: grid; grid-template-columns: 3px minmax(0,1fr) auto; gap: 14px;
+    align-items: center; padding: 13px 16px; border-bottom: 1px solid var(--border);
+    transition: background .14s;
+  }
+  .due-item:last-child { border-bottom: 0; }
+  .due-item:hover { background: var(--surface-2); }
+  .due-item .flag { width: 3px; height: 34px; border-radius: 2px; background: var(--border-strong); }
+  .due-item.overdue .flag { background: var(--danger); }
+  .due-item.today .flag { background: var(--warn); }
+  .due-item .q { font-size: 13.5px; line-height: 1.55; }
+  .due-item .meta { display: flex; align-items: center; gap: 8px; margin-top: 5px; }
+
+  .hist-item {
+    display: grid; grid-template-columns: 68px minmax(0,1fr) auto; gap: 12px;
+    align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--border);
+  }
+  .hist-item:last-child { border-bottom: 0; }
+  .hist-item:hover { background: var(--surface-2); }
+  .hist-item .mod { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); letter-spacing: .06em; }
+  .hist-item .t { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hist-item time { font-size: 11px; color: var(--faint); }
+
+  .kp { display: grid; grid-template-columns: minmax(0,1fr) 46px; gap: 12px; align-items: center; padding: 9px 0; }
+  .kp + .kp { border-top: 1px solid var(--border); }
+  .kp .nm { font-size: 12.5px; margin-bottom: 5px; display: flex; justify-content: space-between; gap: 8px; }
+  .kp .nm b { font-family: var(--font-mono); font-weight: 500; color: var(--muted); font-size: 12px; }
+
+  .quick { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+  .quick a {
+    display: flex; flex-direction: column; gap: 6px; padding: 13px 14px;
+    border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface);
+    transition: border-color .14s, transform .12s;
+  }
+  .quick a:hover { border-color: var(--accent-line); transform: translateY(-2px); }
+  .quick .ic { font-family: var(--font-mono); font-size: 15px; color: var(--muted); transition: color .14s; }
+  .quick a:hover .ic { color: var(--accent-ink); }
+  .quick .nm { font-size: 13px; font-weight: 540; }
+  .quick .ds { font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div id="rail-slot"></div>
+
+  <main class="main">
+    <div class="page">
+
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Workbench · 2026-10-07 周三</div>
+          <div class="title-row" style="margin-top:7px">
+            <h1 class="h1">早上好，马乾恩</h1>
+            <span class="pill warn" id="due-pill">—</span>
+          </div>
+          <p class="lead" style="margin-top:8px;font-size:14px">
+            今天有 <b id="due-n">—</b> 道错题到了复习窗口。系统按 SM-2 给你排的期，连续答对 2 次才会移出错题本。
+          </p>
+        </div>
+        <div class="actions">
+          <a class="btn" href="report.html">查看能力报告</a>
+          <a class="btn btn-primary" href="practice.html">开始刷题训练</a>
+        </div>
+      </div>
+
+      <!-- ===== KPI ===== -->
+      <div class="grid g-4">
+        <div class="stat accent">
+          <div class="k">待复习</div>
+          <div class="v" id="k-due">—</div>
+          <div class="sub">SM-2 排期已到期</div>
+        </div>
+        <div class="stat">
+          <div class="k">累计作答</div>
+          <div class="v" id="k-total">—</div>
+          <div class="sub">含历史全部作答</div>
+        </div>
+        <div class="stat">
+          <div class="k">错题</div>
+          <div class="v" id="k-wrong">—</div>
+          <div class="sub">连续答对 2 次毕业</div>
+        </div>
+        <div class="stat">
+          <div class="k">收藏</div>
+          <div class="v" id="k-fav">—</div>
+          <div class="sub">手动标记的题目</div>
+        </div>
+      </div>
+
+      <!-- ===== 主体 ===== -->
+      <div class="grid g-main-side mt-5">
+
+        <!-- 左列 -->
+        <div class="stack">
+          <section class="card" data-od-id="dashboard-card-01">
+            <div class="card-head">
+              <div class="h3">今天该复习 <span class="pill accent" id="due-cnt">0</span></div>
+              <a class="btn btn-sm" href="wrongbook.html">打开错题本</a>
+            </div>
+            <div class="card-body tight" id="due-list"></div>
+          </section>
+
+          <section class="card" data-od-id="dashboard-card-02">
+            <div class="card-head">
+              <div class="h3">最近交互</div>
+              <a class="btn btn-sm btn-ghost" href="wrongbook.html">全部历史</a>
+            </div>
+            <div class="card-body tight" id="hist-list"></div>
+            <div class="card-foot">
+              <span class="small">点任意一条可把当时的页面现场整块灌回去，不需要重跑模型</span>
+            </div>
+          </section>
+        </div>
+
+        <!-- 右列 -->
+        <div class="stack">
+          <section class="card" data-od-id="dashboard-card-03">
+            <div class="card-head">
+              <div class="h3">能力雷达</div>
+              <span class="pill">6 个知识点</span>
+            </div>
+            <div class="card-body" style="display:grid;place-items:center;padding:18px 12px">
+              <div id="radar" style="width:100%;display:grid;place-items:center"></div>
+            </div>
+            <div class="card-foot">
+              <span class="small">掌握度由每次作答的四维加权总分聚合而来</span>
+              <a class="btn btn-sm" href="report.html">明细</a>
+            </div>
+          </section>
+
+          <section class="card" data-od-id="dashboard-card-04">
+            <div class="card-head"><div class="h3">最该补的短板</div></div>
+            <div class="card-body" id="weak-list"></div>
+            <div class="card-foot">
+              <span class="small">掌握度 &lt; 0.6 的知识点按升序排列</span>
+            </div>
+          </section>
+
+          <section class="card" data-od-id="dashboard-card-05">
+            <div class="card-head"><div class="h3">快捷入口</div></div>
+            <div class="card-body">
+              <div class="quick">
+                <a href="practice.html"><span class="ic">▸</span><span class="nm">出题训练</span><span class="ds">按方向 / 难度 / 题型生成</span></a>
+                <a href="interview.html"><span class="ic">◉</span><span class="nm">模拟面试</span><span class="ds">HR 一问一答，token 流式</span></a>
+                <a href="resume.html"><span class="ic">≡</span><span class="nm">简历诊断</span><span class="ds">PDF + JD 匹配度分析</span></a>
+                <a href="bigscreen.html"><span class="ic">▣</span><span class="nm">数据大屏</span><span class="ds">答辩演示用作战室</span></a>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="assets/app.js"></script>
+<script src="assets/api-real.js"></script>
+<script>
+(async function () {
+  Om.mount("dashboard");
+
+  // ---- GET /api/v1/answers/stats ----
+  const stats = await Om.api("GET", "/api/v1/answers/stats");
+  document.getElementById("k-due").innerHTML = `${stats.due}<small>题</small>`;
+  document.getElementById("k-total").innerHTML = `${stats.total}<small>次</small>`;
+  document.getElementById("k-wrong").innerHTML = `${stats.wrong}<small>题</small>`;
+  document.getElementById("k-fav").innerHTML = `${stats.favorite}<small>题</small>`;
+  document.getElementById("due-cnt").textContent = stats.due;
+  document.getElementById("due-n").textContent = stats.due;
+  document.getElementById("due-pill").innerHTML = `<span class="dot warn"></span>${stats.due} 题待复习`;
+  // 侧栏错题本角标读的是模拟数据，拿到真实统计后修正
+  Om.setBadge("due", stats.due);
+
+  // ---- GET /api/v1/answers/due ----
+  const due = await Om.api("GET", "/api/v1/answers/due");
+  const now = Date.now();
+  document.getElementById("due-list").innerHTML = due.length
+    ? due
+        .map((a) => {
+          const overdue = a.review_due_at && new Date(a.review_due_at).getTime() < now;
+          return `<div class="due-item ${overdue ? "overdue" : "today"}">
+            <span class="flag"></span>
+            <div>
+              <div class="q clamp-2">${a.question_content}</div>
+              <div class="meta">
+                <span class="pill">${a.question_direction || "—"} · ${a.question_difficulty || "—"}</span>
+                <span class="pill ${a.total_score >= 4 ? "success" : a.total_score >= 3 ? "warn" : "danger"}">上次 ${a.total_score.toFixed(1)}</span>
+                <span class="cap">已复习 ${a.review_count} 次 · 间隔 ${a.review_interval_days} 天</span>
+              </div>
+            </div>
+            <a class="btn btn-sm btn-accent" href="wrongbook.html?focus=${a.id}">去复习</a>
+          </div>`;
+        })
+        .join("")
+    : `<div class="empty" style="border:0;background:transparent">
+         <div class="glyph">✓</div><div class="t">今天没有到期的错题</div>
+         <div class="d">SM-2 排期把下一次复习放在了未来。想加练就去刷题训练出新题。</div>
+       </div>`;
+
+  // ---- GET /api/v1/history ----
+  const hist = (await Om.api("GET", "/api/v1/history")).slice(0, 6);
+  const MOD = { practice: "刷题", resume: "简历", interview: "面试", report: "报告" };
+  document.getElementById("hist-list").innerHTML = hist.length
+    ? hist
+        .map(
+          (h) => `<div class="hist-item">
+        <span class="mod">${MOD[h.module] || h.module}</span>
+        <span class="t">${h.title}</span>
+        <time class="num">${Om.relDay(h.updated_at)} ${Om.hhmm(h.updated_at)}</time>
+      </div>`
+        )
+        .join("")
+    : `<div class="empty" style="border:0;background:transparent"><div class="d">还没有历史记录，去刷题或面试一次就会出现在这里。</div></div>`;
+
+  // ---- GET /api/v1/report/profile ----
+  const profile = await Om.api("GET", "/api/v1/report/profile");
+  const radarVals = {};
+  profile.forEach((p) => (radarVals[p.knowledge_point] = Math.round(p.mastery * 100)));
+  document.getElementById("radar").innerHTML = profile.length
+    ? Om.radar(radarVals, { size: 288 })
+    : `<div class="empty" style="border:0;background:transparent"><div class="d">还没有能力画像数据。训练后把薄弱点记入画像即可生成雷达图。</div></div>`;
+
+  document.getElementById("weak-list").innerHTML = profile.length
+    ? profile
+        .slice()
+        .sort((a, b) => a.mastery - b.mastery)
+        .slice(0, 4)
+        .map((p) => {
+          const m = Math.round(p.mastery * 100);
+          const tone = m >= 70 ? "success" : m >= 55 ? "accent" : m >= 45 ? "warn" : "danger";
+          return `<div class="kp">
+        <div>
+          <div class="nm"><span>${p.knowledge_point}</span><b>${m}%</b></div>
+          <div class="bar"><i class="${tone}" style="width:${m}%"></i></div>
+        </div>
+        <a class="btn btn-sm btn-ghost" href="practice.html" style="justify-self:end">练</a>
+      </div>`;
+        })
+        .join("")
+    : `<div class="empty" style="border:0;background:transparent"><div class="d">暂无薄弱点记录。</div></div>`;
+})().catch((e) => {
+  Om.toast("err", "加载失败", e.message || String(e));
+});
+</script>
+</body>
+</html>

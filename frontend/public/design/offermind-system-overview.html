@@ -1,0 +1,976 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OfferMind · 可观测的 AI 面试训练</title>
+<link rel="stylesheet" href="assets/tokens.css" />
+<style>
+  body { background: var(--bg); }
+
+  /* ============================================================
+     顶栏：压在暗色首屏上时用暗玻璃，滚过首屏后切成浅色玻璃
+     ============================================================ */
+  .top {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 60;
+    transition: background .4s ease, border-color .4s ease, backdrop-filter .4s ease;
+    border-bottom: 1px solid transparent;
+  }
+  .top.on-dark { background: oklch(19% 0.022 258 / 0.55); border-bottom-color: oklch(100% 0 0 / 0.08); }
+  .top.on-dark { backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+  .top.on-light { background: oklch(98.4% 0.004 250 / 0.9); border-bottom-color: var(--border); }
+  .top.on-light { backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+  .top-in {
+    max-width: 1280px; margin: 0 auto; padding: 0 32px;
+    height: 60px; display: flex; align-items: center; gap: 14px;
+  }
+  .brand { display: flex; align-items: baseline; gap: 9px; }
+  .brand .m { font-size: 16px; font-weight: 640; letter-spacing: -0.022em; transition: color .4s; }
+  .brand .t {
+    font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.09em;
+    border-radius: var(--r-xs); padding: 1px 5px; transition: all .4s;
+  }
+  .top.on-dark .brand .m { color: #fff; }
+  .top.on-dark .brand .t { color: var(--accent); background: oklch(63% 0.135 195 / 0.12); border: 1px solid oklch(63% 0.135 195 / 0.42); }
+  .top.on-light .brand .m { color: var(--fg); }
+  .top.on-light .brand .t { color: var(--accent-ink); background: var(--accent-soft); border: 1px solid var(--accent-line); }
+
+  .top nav { display: flex; gap: 2px; margin-left: 12px; }
+  .top nav a { padding: 6px 10px; border-radius: var(--r-sm); font-size: 13px; font-weight: 500; transition: background .2s, color .2s; }
+  .top.on-dark nav a { color: oklch(84% 0.014 250); }
+  .top.on-dark nav a:hover { background: oklch(100% 0 0 / 0.09); color: #fff; }
+  .top.on-light nav a { color: var(--fg-2); }
+  .top.on-light nav a:hover { background: var(--surface-3); color: var(--fg); }
+  .top .spacer { margin-left: auto; }
+  @media (max-width: 980px) { .top nav { display: none; } }
+
+  .pill-dark {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 5px 10px; border-radius: var(--r-full);
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.03em;
+    background: oklch(100% 0 0 / 0.07); border: 1px solid oklch(100% 0 0 / 0.12);
+    color: oklch(88% 0.01 250);
+  }
+
+  /* ============================================================
+     首屏：暗色画布 + 检索星图
+     ============================================================ */
+  .hero {
+    position: relative; min-height: 100vh; overflow: hidden;
+    background: var(--ink-bg); color: var(--ink-fg);
+    display: flex; align-items: center;
+  }
+  /* 唯一的光源：左上角一团极弱的青，把暗面撑出纵深 */
+  .hero::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 62% 52% at 24% 34%, oklch(63% 0.135 195 / 0.11), transparent 70%),
+      radial-gradient(ellipse 46% 42% at 82% 76%, oklch(56% 0.10 265 / 0.10), transparent 72%);
+  }
+  /* 星图往下淡出，与下面的浅色正文衔接 */
+  .hero::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 190px;
+    background: linear-gradient(to bottom, transparent, var(--bg));
+    pointer-events: none; z-index: 3;
+  }
+  #sky {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    cursor: crosshair; z-index: 1;
+  }
+  .hero-in {
+    position: relative; z-index: 2;
+    max-width: 1280px; width: 100%; margin: 0 auto;
+    padding: 120px 32px 140px;
+    display: grid; grid-template-columns: minmax(0, 1fr) 348px; gap: 56px; align-items: center;
+    pointer-events: none; /* 画布接管指针；文字区单独放开 */
+  }
+  .hero-in > * { pointer-events: auto; }
+  @media (max-width: 1040px) {
+    .hero-in { grid-template-columns: minmax(0, 1fr); gap: 40px; padding: 108px 24px 120px; }
+  }
+
+  .hero-copy { max-width: 40ch; }
+  .hero .eyebrow { color: oklch(66% 0.03 250); }
+  .hero h1 {
+    font-size: clamp(38px, 4.9vw, 68px); line-height: 1.05; letter-spacing: -0.034em;
+    font-weight: 620; margin: 18px 0 22px; color: #fff;
+  }
+  .hero h1 .l { display: block; overflow: hidden; }
+  .hero h1 .l > span {
+    display: block; transform: translateY(105%);
+    animation: rise 1s cubic-bezier(.16,.84,.28,1) forwards;
+  }
+  .hero h1 .l:nth-child(2) > span { animation-delay: .11s; }
+  @keyframes rise { to { transform: none; } }
+  .hero h1 em { font-style: normal; color: var(--accent); }
+  .hero .sub {
+    font-size: 15.5px; line-height: 1.74; color: oklch(76% 0.012 250);
+    max-width: 44ch; text-wrap: pretty;
+    opacity: 0; animation: fadeUp .9s .42s cubic-bezier(.16,.84,.28,1) forwards;
+  }
+  .hero .cta { display: flex; gap: 10px; margin-top: 30px; flex-wrap: wrap; opacity: 0; animation: fadeUp .9s .58s cubic-bezier(.16,.84,.28,1) forwards; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    .hero h1 .l > span { transform: none; animation: none; }
+    .hero .sub, .hero .cta { opacity: 1; animation: none; }
+  }
+
+  .btn-on-dark {
+    background: oklch(100% 0 0 / 0.08); border-color: oklch(100% 0 0 / 0.18); color: #fff;
+  }
+  .btn-on-dark:hover { background: oklch(100% 0 0 / 0.14); border-color: oklch(100% 0 0 / 0.3); }
+
+  /* ---------- 实时检索读出 ---------- */
+  .hud {
+    background: oklch(23.5% 0.024 258 / 0.72);
+    border: 1px solid oklch(100% 0 0 / 0.1);
+    border-radius: var(--r-lg); overflow: hidden;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 26px 70px oklch(10% 0.02 258 / 0.5);
+    opacity: 0; animation: fadeUp 1s .7s cubic-bezier(.16,.84,.28,1) forwards;
+  }
+  .hud-h {
+    display: flex; align-items: center; gap: 9px;
+    padding: 12px 15px; border-bottom: 1px solid oklch(100% 0 0 / 0.08);
+  }
+  .hud-h .eyebrow { color: oklch(62% 0.016 258); font-size: 10px; }
+  .hud-h .live {
+    margin-left: auto; display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.13em;
+    text-transform: uppercase; color: var(--accent);
+  }
+  .hud-stats { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid oklch(100% 0 0 / 0.08); }
+  .hud-stats > div { padding: 12px 14px; border-right: 1px solid oklch(100% 0 0 / 0.08); }
+  .hud-stats > div:last-child { border-right: 0; }
+  .hud-stats .k { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: oklch(58% 0.016 258); }
+  .hud-stats .v {
+    font-family: var(--font-mono); font-size: 22px; font-weight: 400; letter-spacing: -0.02em;
+    color: #fff; margin-top: 4px; font-variant-numeric: tabular-nums;
+  }
+  .hud-stats .v small { font-size: 11px; color: oklch(58% 0.016 258); margin-left: 3px; }
+  .hud-list { padding: 10px 0 12px; min-height: 214px; }
+  .hrow {
+    display: grid; grid-template-columns: 24px minmax(0,1fr) 52px; gap: 9px; align-items: center;
+    padding: 7px 15px; font-family: var(--font-mono); font-size: 11.5px;
+    opacity: 0; transition: opacity .3s;
+  }
+  .hrow.on { opacity: 1; }
+  .hrow .rk { color: oklch(58% 0.016 258); font-size: 10.5px; }
+  .hrow .tp { color: oklch(85% 0.01 250); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hrow .sim { text-align: right; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .hud-f {
+    padding: 10px 15px; border-top: 1px solid oklch(100% 0 0 / 0.08);
+    font-family: var(--font-mono); font-size: 10.5px; color: oklch(58% 0.016 258); line-height: 1.6;
+  }
+
+  /* ---------- 引导 ---------- */
+  .cue {
+    position: absolute; left: 50%; bottom: 34px; transform: translateX(-50%); z-index: 4;
+    display: flex; flex-direction: column; align-items: center; gap: 9px;
+    font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: oklch(56% 0.02 250);
+    pointer-events: none;
+  }
+  .cue .rail { width: 1px; height: 42px; background: linear-gradient(oklch(100% 0 0 / 0.3), transparent); position: relative; overflow: hidden; }
+  .cue .rail::after {
+    content: ""; position: absolute; inset: 0; background: var(--accent);
+    animation: travel 2.4s cubic-bezier(.6,0,.4,1) infinite;
+  }
+  @keyframes travel { 0% { transform: translateY(-100%); } 60%, 100% { transform: translateY(100%); } }
+  @media (prefers-reduced-motion: reduce) { .cue .rail::after { animation: none; opacity: .5; } }
+
+  /* ============================================================
+     正文
+     ============================================================ */
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 0 32px; }
+  .sec { padding: 92px 0; border-top: 1px solid var(--border); }
+  .sec-head { margin-bottom: 38px; max-width: 60ch; }
+  .sec-head h2 {
+    font-size: clamp(24px, 2.5vw, 33px); line-height: 1.22; letter-spacing: -0.026em;
+    font-weight: 600; margin: 12px 0 14px; text-wrap: balance;
+  }
+  .sec-head p { font-size: 14.5px; line-height: 1.75; color: var(--fg-2); text-wrap: pretty; }
+
+  /* 滚动入场 */
+  .rv { opacity: 0; transform: translateY(20px); transition: opacity .78s cubic-bezier(.16,.84,.28,1), transform .78s cubic-bezier(.16,.84,.28,1); transition-delay: var(--d, 0ms); }
+  .rv.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) { .rv { opacity: 1; transform: none; transition: none; } }
+
+  /* ---------- 对照 ---------- */
+  .vs { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 18px; }
+  @media (max-width: 880px) { .vs { grid-template-columns: minmax(0,1fr); } }
+  .vs-card { border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); overflow: hidden; display: flex; flex-direction: column; }
+  .vs-card.dim { background: var(--surface-2); }
+  .vs-h { display: flex; align-items: center; gap: 9px; padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 560; }
+  .vs-h .tagn { margin-left: auto; }
+  .vs-b { padding: 24px 18px; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+  .vs-card.dim .vs-b { align-items: center; text-align: center; gap: 16px; }
+
+  .spin { width: 34px; height: 34px; border-radius: 50%; border: 2.5px solid var(--surface-3); border-top-color: var(--faint); animation: spin .9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+  .dimline { width: 100%; max-width: 240px; height: 6px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
+  .dimline i { display: block; height: 100%; width: 42%; background: var(--border-strong); border-radius: 3px; }
+  .vs-card .cap2 { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+
+  .steps-mini { display: grid; gap: 11px; }
+  .smi { display: grid; grid-template-columns: 46px minmax(0,1fr) 66px; gap: 11px; align-items: center; font-family: var(--font-mono); font-size: 11.5px; }
+  .smi .k { color: var(--muted); font-size: 10.5px; }
+  .smi .k.模型 { color: oklch(55% 0.11 195); }
+  .smi .v { color: var(--fg-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .smi .m { text-align: right; color: var(--fg); font-variant-numeric: tabular-nums; }
+  .smi .m.wait { color: var(--faint); }
+  .smi .trackline { grid-column: 2 / -1; height: 3px; border-radius: 2px; background: var(--surface-3); overflow: hidden; }
+  .smi .trackline i { display: block; height: 0; width: 0; background: var(--accent-ink); border-radius: 2px; transition: width .5s cubic-bezier(.2,.8,.2,1), height .3s; }
+
+  /* ---------- 数据飞轮 ---------- */
+  .wheel-wrap { display: grid; grid-template-columns: 380px minmax(0,1fr); gap: 48px; align-items: center; }
+  @media (max-width: 980px) { .wheel-wrap { grid-template-columns: minmax(0,1fr); gap: 30px; justify-items: center; } }
+  .ring { position: relative; width: 380px; height: 380px; flex-shrink: 0; }
+  @media (max-width: 520px) { .ring { transform: scale(.82); } }
+  .ring svg { position: absolute; inset: 0; overflow: visible; }
+  .ring .arc { fill: none; stroke: var(--border); stroke-width: 1; }
+  /* SVG 圆从 3 点钟起画，而节点从 12 点钟排起 —— 把弧转 -90° 对齐，
+     否则高亮弧会从右边开始而不是从第 1 环开始。 */
+  .ring .arc-hi {
+    fill: none; stroke: var(--accent-ink); stroke-width: 1.4; stroke-linecap: round;
+    transform: rotate(-90deg); transform-box: fill-box; transform-origin: center;
+    transition: stroke-dasharray .6s cubic-bezier(.2,.8,.2,1);
+  }
+  .wnode {
+    position: absolute;
+    display: grid; justify-items: center; gap: 4px;
+    width: 92px; margin: -26px 0 0 -46px;
+    padding: 8px 6px; border-radius: var(--r-sm); border: 1px solid transparent;
+    transition: background .25s, border-color .25s, transform .35s cubic-bezier(.2,.8,.2,1);
+  }
+  .wnode:hover { background: var(--surface-2); }
+  .wnode .ic { font-family: var(--font-mono); font-size: 15px; color: var(--muted); transition: color .25s; }
+  .wnode .lb { font-size: 12px; font-weight: 540; color: var(--fg-2); white-space: nowrap; transition: color .25s; }
+  .wnode[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent-line); transform: scale(1.08); }
+  .wnode[aria-pressed="true"] .ic { color: var(--accent-ink); }
+  .wnode[aria-pressed="true"] .lb { color: var(--fg); }
+  .ring-core { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); text-align: center; }
+  .ring-core .n { font-family: var(--font-mono); font-size: 30px; font-weight: 400; letter-spacing: -0.03em; color: var(--fg); }
+  .ring-core .cap { margin-top: 3px; }
+  .wdetail { min-height: 190px; }
+  .wdetail h3 { font-size: 18px; font-weight: 600; letter-spacing: -0.016em; margin-bottom: 12px; }
+  .wdetail p { font-size: 14px; line-height: 1.78; color: var(--fg-2); max-width: 58ch; text-wrap: pretty; }
+  .wdetail .fact {
+    margin-top: 18px; padding: 13px 15px; border-radius: var(--r-sm);
+    background: var(--surface-2); border-left: 2px solid var(--accent-line);
+    font-size: 12.5px; line-height: 1.68; color: var(--fg-2);
+  }
+  .wdetail .fact b { color: var(--accent-ink); font-weight: 560; }
+
+  /* ---------- 评分卡 ---------- */
+  .score-card { display: grid; grid-template-columns: 190px minmax(0,1fr); gap: 40px; padding: 30px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); }
+  @media (max-width: 860px) { .score-card { grid-template-columns: minmax(0,1fr); gap: 26px; } }
+  .total { display: grid; place-items: center; align-content: center; }
+  .gauge { position: relative; width: 148px; height: 148px; }
+  .gauge svg { transform: rotate(-90deg); }
+  .gauge .ring-bg { fill: none; stroke: var(--surface-3); stroke-width: 9; }
+  .gauge .ring-fg { fill: none; stroke: var(--accent-ink); stroke-width: 9; stroke-linecap: round; transition: stroke-dashoffset 1.1s cubic-bezier(.2,.8,.2,1) .15s; }
+  .gauge .in { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+  .gauge .n { font-family: var(--font-mono); font-size: 34px; font-weight: 500; letter-spacing: -0.034em; line-height: 1; }
+  .gauge .d { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); margin-top: 4px; }
+  .total .say { font-size: 12.5px; color: var(--muted); text-align: center; margin-top: 16px; line-height: 1.62; }
+
+  .dim-rows { display: grid; gap: 17px; align-content: center; }
+  .dim-row { display: grid; grid-template-columns: 108px minmax(0,1fr) 44px; gap: 16px; align-items: start; }
+  @media (max-width: 620px) { .dim-row { grid-template-columns: minmax(0,1fr); gap: 7px; } .dim-row .sc { text-align: left !important; } }
+  .dim-row .nm { font-size: 13px; font-weight: 560; }
+  .dim-row .nm em { display: block; font-style: normal; font-family: var(--font-mono); font-size: 10px; color: var(--faint); letter-spacing: .05em; margin-top: 3px; }
+  .dim-row .bd { display: grid; gap: 7px; }
+  .dim-row .why { font-size: 12.5px; line-height: 1.64; color: var(--fg-2); }
+  .dim-row .sc { font-family: var(--font-mono); font-size: 15px; text-align: right; font-variant-numeric: tabular-nums; }
+  .dim-row .sc span { color: var(--faint); font-size: 11px; }
+  .dim-row .bar > i { width: 0; transition: width .9s cubic-bezier(.2,.8,.2,1) var(--d, 0ms); }
+
+  /* ---------- 页脚 ---------- */
+  .foot { padding: 44px 0 60px; border-top: 1px solid var(--border); }
+  .foot-links { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 26px; }
+  .foot-links a {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 7px 12px; border: 1px solid var(--border); border-radius: var(--r-sm);
+    font-size: 12.5px; color: var(--fg-2); transition: border-color .16s, color .16s, background .16s, transform .16s;
+  }
+  .foot-links a:hover { border-color: var(--accent-line); background: var(--accent-soft); color: var(--accent-ink); transform: translateY(-2px); }
+  .foot-links a .ic { font-family: var(--font-mono); font-size: 12px; color: var(--faint); transition: color .16s; }
+  .foot-links a:hover .ic { color: var(--accent-ink); }
+  .foot-base { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+  .foot-base .spacer { margin-left: auto; }
+</style>
+</head>
+<body>
+
+<header class="top on-dark" id="top">
+  <div class="top-in">
+    <a class="brand" href="index.html"><span class="m">OfferMind</span><span class="t">v0.9</span></a>
+    <nav>
+      <a href="dashboard.html">工作台</a>
+      <a href="practice.html">刷题训练</a>
+      <a href="interview.html">模拟面试</a>
+      <a href="resume.html">简历诊断</a>
+      <a href="report.html">能力报告</a>
+      <a href="bigscreen.html">数据大屏</a>
+    </nav>
+    <span class="spacer"></span>
+    <span class="pill-dark" id="navstat"><span class="dot done"></span>服务运行中</span>
+    <a class="btn btn-primary" href="login.html">进入系统</a>
+  </div>
+</header>
+
+<!-- ==================== 首屏 ==================== -->
+<section class="hero" id="hero" data-od-id="index-hero-01">
+  <canvas id="sky" aria-label="检索星图：光标即查询向量，靠近的知识片段被召回并排序"></canvas>
+
+  <div class="hero-in">
+    <div class="hero-copy">
+      <div class="eyebrow">可观测 Agentic RAG · AI 求职面试训练平台</div>
+      <h1>
+        <span class="l"><span>每一次检索</span></span>
+        <span class="l"><span>都<em>看得见</em></span></span>
+      </h1>
+      <p class="sub">
+        移动光标 —— 它就是你这一次的查询向量。被点亮的片段是从题库里召回的知识点，
+        右侧按相似度排出保留的前 5 条。你在屏幕上看到的，正是评分时喂给模型的参照。
+      </p>
+      <div class="cta">
+        <a class="btn btn-primary btn-lg" href="practice.html">开始一次刷题训练</a>
+        <a class="btn btn-lg btn-on-dark" href="bigscreen.html">看数据大屏</a>
+      </div>
+    </div>
+
+    <!-- 实时读出：数字全部由光标与节点的真实距离算出 -->
+    <aside class="hud">
+      <div class="hud-h">
+        <span class="eyebrow">Retrieval</span>
+        <span class="live" id="hudstate"><span class="dot running"></span>live</span>
+      </div>
+      <div class="hud-stats">
+        <div><div class="k">召回候选</div><div class="v" id="hud-recall">0</div></div>
+        <div><div class="k">精排保留</div><div class="v">5<small>条</small></div></div>
+        <div><div class="k">最高相似度</div><div class="v" id="hud-top">—</div></div>
+      </div>
+      <div class="hud-list" id="hud-list"></div>
+      <div class="hud-f">点击画布 = 重新发起一次检索</div>
+    </aside>
+  </div>
+
+  <div class="cue"><span>向下滚动</span><span class="rail"></span></div>
+</section>
+
+<!-- ==================== 正文 ==================== -->
+<div class="wrap">
+
+  <!-- 对照 -->
+  <section class="sec" data-od-id="index-sec-02">
+    <div class="sec-head rv">
+      <div class="eyebrow">Why Observable</div>
+      <h2>同样是 3.7 秒，差别在于用户知不知道发生了什么</h2>
+      <p>把模型调用摊开，直接改变两件事：卡住时用户知道卡在哪一步，答得不好时用户知道是哪一维、为什么。这两件事决定了用户是继续练，还是关掉页面。</p>
+    </div>
+
+    <div class="vs">
+      <div class="vs-card dim rv" style="--d:80ms">
+        <div class="vs-h"><span class="dot"></span>默认形态 <span class="tagn pill">只给结果</span></div>
+        <div class="vs-b">
+          <div class="spin"></div>
+          <div class="dimline"><i></i></div>
+          <div class="cap2">正在生成…</div>
+        </div>
+      </div>
+
+      <div class="vs-card rv" style="--d:160ms">
+        <div class="vs-h"><span class="dot done"></span>OfferMind <span class="tagn pill accent">给过程</span></div>
+        <div class="vs-b">
+          <div class="steps-mini" id="trace"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 数据飞轮 -->
+  <section class="sec" data-od-id="index-sec-03">
+    <div class="sec-head rv">
+      <div class="eyebrow">Data Flywheel</div>
+      <h2>每一次作答，都在让评分器变好一点</h2>
+      <p>这套系统不需要另找数据集 —— 它自己就在生产训练样本。点开任意一环看它做什么。</p>
+    </div>
+
+    <div class="wheel-wrap rv">
+      <div class="ring" id="ring">
+        <svg viewBox="0 0 380 380" aria-hidden="true">
+          <circle class="arc" cx="190" cy="190" r="132"></circle>
+          <circle class="arc-hi" id="ringHi" cx="190" cy="190" r="132"
+                  stroke-dasharray="0 830" stroke-dashoffset="0"></circle>
+        </svg>
+        <div class="ring-core"><div class="n" id="ringNum">01</div><div class="cap" id="ringCap">入口</div></div>
+      </div>
+      <div class="wdetail">
+        <h3 id="w-title">—</h3>
+        <p id="w-body">—</p>
+        <div class="fact" id="w-fact">—</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 四维评分 -->
+  <section class="sec" data-od-id="index-sec-04">
+    <div class="sec-head rv">
+      <div class="eyebrow">Explainable Scoring</div>
+      <h2>不给裸分数，每一维都要说出理由</h2>
+      <p>四维 rubric 加权求和，每一维单独打分并给出评分理由。用户拿到的不只是「3.4 分」，而是「哪一维拖了后腿、下次怎么改」。</p>
+    </div>
+
+    <div class="score-card rv">
+      <div class="total">
+        <div class="gauge">
+          <svg viewBox="0 0 148 148" width="148" height="148">
+            <circle class="ring-bg" cx="74" cy="74" r="64"></circle>
+            <circle class="ring-fg" id="gaugeArc" cx="74" cy="74" r="64"
+                    stroke-dasharray="402" stroke-dashoffset="402"></circle>
+          </svg>
+          <div class="in"><div class="n" id="gaugeNum">0.00</div><div class="d">/ 5.00</div></div>
+        </div>
+        <div class="say">方向对但讲不透<br />属于典型的「会做不会说」</div>
+      </div>
+
+      <div class="dim-rows">
+        <div class="dim-row">
+          <div class="nm">正确性<em>权重 0.40</em></div>
+          <div class="bd">
+            <div class="bar"><i class="warn" data-w="60"></i></div>
+            <div class="why">说对了「最左前缀」这一条，但没讲清范围查询会中断后续列的匹配。</div>
+          </div>
+          <div class="sc">3<span> / 5</span></div>
+        </div>
+        <div class="dim-row">
+          <div class="nm">完整性<em>权重 0.30</em></div>
+          <div class="bd">
+            <div class="bar"><i class="warn" data-w="60"></i></div>
+            <div class="why">漏了覆盖索引与索引下推两个常见追问点。</div>
+          </div>
+          <div class="sc">3<span> / 5</span></div>
+        </div>
+        <div class="dim-row">
+          <div class="nm">表达与结构<em>权重 0.15</em></div>
+          <div class="bd">
+            <div class="bar"><i class="accent" data-w="80"></i></div>
+            <div class="why">结构清楚，先结论后解释。</div>
+          </div>
+          <div class="sc">4<span> / 5</span></div>
+        </div>
+        <div class="dim-row">
+          <div class="nm">术语准确性<em>权重 0.15</em></div>
+          <div class="bd">
+            <div class="bar"><i class="accent" data-w="80"></i></div>
+            <div class="why">术语使用准确，没有混淆聚簇索引与二级索引。</div>
+          </div>
+          <div class="sc">4<span> / 5</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <div class="foot-links">
+      <a href="dashboard.html"><span class="ic">◇</span>工作台</a>
+      <a href="practice.html"><span class="ic">▸</span>刷题训练</a>
+      <a href="wrongbook.html"><span class="ic">★</span>错题本</a>
+      <a href="interview.html"><span class="ic">◉</span>模拟面试</a>
+      <a href="resume.html"><span class="ic">≡</span>简历诊断</a>
+      <a href="report.html"><span class="ic">◈</span>能力报告</a>
+      <a href="admin.html"><span class="ic">⌘</span>后台概览</a>
+      <a href="admin-questions.html"><span class="ic">▤</span>题库管理</a>
+      <a href="admin-config.html"><span class="ic">⚙</span>模型与检索</a>
+      <a href="admin-api.html"><span class="ic">⌗</span>接口控制台</a>
+      <a href="bigscreen.html"><span class="ic">▣</span>数据大屏</a>
+    </div>
+    <div class="foot-base">
+      <span>OfferMind · 可观测 Agentic RAG 驱动的 AI 求职面试训练平台</span>
+      <span class="spacer"></span>
+      <span>云端推理实测：P50 3.74s · P95 5.45s · P99 5.55s · 0.89 req/s</span>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+/* ============================================================================
+   一、检索星图
+   ----------------------------------------------------------------------------
+   光标即查询向量：与节点距离 d 决定它是否被召回（d < R），
+   召回的节点按 d 升序取前 5 条作为「精排保留」。
+   相似度是 d 的真实函数（sim = 0.99 − d/R × 0.42），不是写死的数字。
+   ========================================================================== */
+(function () {
+  const cv = document.getElementById("sky");
+  if (!cv) return;
+  const ctx = cv.getContext("2d");
+  const hero = document.getElementById("hero");
+
+  // 真实考点：取自题库的方向与考点，不是随手编的标签
+  const TOPICS = [
+    "MySQL 索引最左前缀", "覆盖索引与回表", "索引下推 ICP", "事务隔离级别", "MVCC 多版本并发",
+    "分库分表跨库分页", "慢查询定位路径", "Redis 缓存穿透", "Redis 缓存击穿", "Redis 缓存雪崩",
+    "布隆过滤器", "分布式锁与续期", "LRU 缓存实现", "两数之和", "有效括号序列",
+    "双向链表与哈希表", "进程与线程的区别", "协程与用户态调度", "死锁的四个条件", "虚拟内存与缺页",
+    "HTTPS 握手过程", "对称与非对称加密", "TCP 三次握手", "TCP 拥塞控制", "HTTP 缓存策略",
+    "浏览器事件循环", "宏任务与微任务", "重排与重绘", "短链服务设计", "发号器选型",
+    "热点 key 处理", "限流与熔断", "消息队列幂等", "幂等与去重表", "CAP 与最终一致",
+    "B+ 树与聚簇索引", "Explain 执行计划", "连接池与超时", "GC 与内存泄漏", "线程池参数",
+  ];
+
+  let W = 0, H = 0, DPR = 1;
+  const NODES = [];
+  let ambientWeb = [];
+  const pointer = { x: 0, y: 0, tx: 0, ty: 0, active: false, lastMove: 0 };
+  const ripples = [];
+  let rafId = 0, running = false, frame = 0;
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function seed() {
+    NODES.length = 0;
+    // 密度跟着面积走，小屏不糊、大屏不空
+    const n = Math.max(58, Math.min(132, Math.round((W * H) / 13500)));
+    for (let i = 0; i < n; i++) {
+      NODES.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        vx: (Math.random() - 0.5) * 0.16,
+        vy: (Math.random() - 0.5) * 0.16,
+        r: 0.9 + Math.random() * 1.5,
+        topic: TOPICS[i % TOPICS.length],
+        ph: Math.random() * Math.PI * 2, // 呼吸相位
+      });
+    }
+    pointer.x = pointer.tx = W * 0.66;
+    pointer.y = pointer.ty = H * 0.46;
+  }
+
+  function resize() {
+    const r = hero.getBoundingClientRect();
+    // 尺寸没实质变化就不重新播种 —— 否则拖动窗口边缘会把星图整片重掷
+    if (NODES.length && Math.abs(r.width - W) < 2 && Math.abs(r.height - H) < 2) return;
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    W = r.width; H = r.height;
+    cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+    cv.style.width = W + "px"; cv.style.height = H + "px";
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    seed();
+    if (reduceMotion) drawStatic();
+  }
+
+  function radius() {
+    return Math.max(150, Math.min(300, Math.min(W, H) * 0.34));
+  }
+
+  /** 节点→指针的相似度：距离的线性映射，落在 0.57–0.99 */
+  function similarity(d) {
+    return 0.99 - (d / radius()) * 0.42;
+  }
+
+  function drawStatic() {
+    ctx.clearRect(0, 0, W, H);
+    for (const nd of NODES) {
+      ctx.beginPath();
+      ctx.arc(nd.x, nd.y, nd.r, 0, Math.PI * 2);
+      ctx.fillStyle = "oklch(62% 0.02 250 / 0.5)";
+      ctx.fill();
+    }
+  }
+
+  function step() {
+    frame++;
+    ctx.clearRect(0, 0, W, H);
+
+    // 指针平滑跟随，避免抖动
+    pointer.x += (pointer.tx - pointer.x) * 0.12;
+    pointer.y += (pointer.ty - pointer.y) * 0.12;
+
+    // 长时间不动就让它自己走一条李萨如轨迹 —— 没人操作时画面也是活的
+    if (!pointer.active || performance.now() - pointer.lastMove > 2600) {
+      const t = frame / 210;
+      pointer.tx = W * (0.5 + 0.32 * Math.cos(t * 0.9));
+      pointer.ty = H * (0.5 + 0.28 * Math.sin(t * 1.3));
+    }
+
+    const R = radius();
+    const px = pointer.x, py = pointer.y;
+
+    // 节点漂移（极慢），出界回绕
+    for (const nd of NODES) {
+      nd.x += nd.vx; nd.y += nd.vy;
+      if (nd.x < -20) nd.x = W + 20; else if (nd.x > W + 20) nd.x = -20;
+      if (nd.y < -20) nd.y = H + 20; else if (nd.y > H + 20) nd.y = -20;
+    }
+
+    // 环境连线：静态网，每 24 帧重算一次，避免每帧 O(n²)
+    if (frame % 24 === 1) {
+      ambientWeb = [];
+      const lim = 132 * 132;
+      for (let i = 0; i < NODES.length; i++) {
+        for (let j = i + 1; j < NODES.length; j++) {
+          const dx = NODES[i].x - NODES[j].x, dy = NODES[i].y - NODES[j].y;
+          if (dx * dx + dy * dy < lim) ambientWeb.push([i, j]);
+        }
+      }
+    }
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "oklch(70% 0.02 250 / 0.09)";
+    ctx.beginPath();
+    for (const [i, j] of ambientWeb) {
+      ctx.moveTo(NODES[i].x, NODES[i].y);
+      ctx.lineTo(NODES[j].x, NODES[j].y);
+    }
+    ctx.stroke();
+
+    // 召回判定
+    const lit = [];
+    for (const nd of NODES) {
+      const dx = nd.x - px, dy = nd.y - py;
+      const d = Math.hypot(dx, dy);
+      nd._d = d;
+      if (d < R) lit.push(nd);
+    }
+    lit.sort((a, b) => a._d - b._d);
+
+    // 召回连线：指针 → 被召回的节点
+    ctx.lineWidth = 1;
+    for (const nd of lit) {
+      const w = 1 - nd._d / R;
+      ctx.strokeStyle = `oklch(63% 0.135 195 / ${(0.06 + w * 0.3).toFixed(3)})`;
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.lineTo(nd.x, nd.y);
+      ctx.stroke();
+    }
+
+    // 精排保留的前 5 条：加粗连线 + 光晕 + 序号
+    const top = lit.slice(0, 5);
+    ctx.lineWidth = 1.4;
+    ctx.strokeStyle = "oklch(63% 0.135 195 / 0.62)";
+    ctx.beginPath();
+    for (const nd of top) { ctx.moveTo(px, py); ctx.lineTo(nd.x, nd.y); }
+    ctx.stroke();
+
+    // 节点
+    for (const nd of NODES) {
+      const inLit = nd._d < R;
+      const pulse = 1 + Math.sin(frame / 60 + nd.ph) * 0.18;
+      const rr = nd.r * (inLit ? 1.5 : 1) * pulse;
+      ctx.beginPath();
+      ctx.arc(nd.x, nd.y, rr, 0, Math.PI * 2);
+      if (inLit) {
+        const w = 1 - nd._d / R;
+        ctx.fillStyle = `oklch(${66 + w * 14}% 0.12 195 / ${(0.5 + w * 0.5).toFixed(2)})`;
+      } else {
+        ctx.fillStyle = "oklch(62% 0.02 250 / 0.42)";
+      }
+      ctx.fill();
+    }
+
+    for (const nd of top) {
+      ctx.beginPath();
+      ctx.arc(nd.x, nd.y, 9, 0, Math.PI * 2);
+      ctx.strokeStyle = "oklch(63% 0.135 195 / 0.5)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    // 指针十字准星
+    ctx.strokeStyle = "oklch(63% 0.135 195 / 0.55)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(px, py, R * 0.06, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(px - 11, py); ctx.lineTo(px - 4, py);
+    ctx.moveTo(px + 4, py); ctx.lineTo(px + 11, py);
+    ctx.moveTo(px, py - 11); ctx.lineTo(px, py - 4);
+    ctx.moveTo(px, py + 4); ctx.lineTo(px, py + 11);
+    ctx.stroke();
+
+    // 检索脉冲
+    for (let i = ripples.length - 1; i >= 0; i--) {
+      const rp = ripples[i];
+      rp.r += (R * 1.5 - rp.r) * 0.06;
+      rp.a *= 0.955;
+      if (rp.a < 0.01) { ripples.splice(i, 1); continue; }
+      ctx.beginPath();
+      ctx.arc(rp.x, rp.y, rp.r, 0, Math.PI * 2);
+      ctx.strokeStyle = `oklch(63% 0.135 195 / ${rp.a.toFixed(3)})`;
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+    }
+
+    // 每 4 帧同步一次读出面板，别让 DOM 成为瓶颈
+    if (frame % 4 === 0) paintHud(lit, top);
+  }
+
+  /* ---------------- 读出面板 ---------------- */
+  const hudRecall = document.getElementById("hud-recall");
+  const hudTop = document.getElementById("hud-top");
+  const hudList = document.getElementById("hud-list");
+  let lastSig = "";
+
+  function paintHud(lit, top) {
+    hudRecall.textContent = lit.length;
+    hudTop.textContent = top.length ? similarity(top[0]._d).toFixed(3) : "—";
+
+    const sig = top.map((n) => n.topic + similarity(n._d).toFixed(3)).join("|");
+    if (sig === lastSig) return; // 没变就不动 DOM
+    lastSig = sig;
+
+    hudList.innerHTML = top
+      .map(
+        (n, i) => `<div class="hrow on">
+          <span class="rk">${String(i + 1).padStart(2, "0")}</span>
+          <span class="tp">${n.topic}</span>
+          <span class="sim">${similarity(n._d).toFixed(2)}</span>
+        </div>`
+      )
+      .join("");
+  }
+
+  /* ---------------- 指针事件 ---------------- */
+  function toLocal(e) {
+    const r = cv.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+  hero.addEventListener("pointermove", (e) => {
+    const p = toLocal(e);
+    pointer.tx = p.x; pointer.ty = p.y;
+    pointer.active = true;
+    pointer.lastMove = performance.now();
+  });
+  hero.addEventListener("pointerleave", () => { pointer.active = false; });
+  hero.addEventListener("pointerdown", (e) => {
+    const p = toLocal(e);
+    pointer.tx = p.x; pointer.ty = p.y;
+    pointer.active = true;
+    pointer.lastMove = performance.now();
+    ripples.push({ x: p.x, y: p.y, r: 8, a: 0.55 });
+    if (!running && !reduceMotion) start();
+  });
+
+  /* ---------------- 循环调度 ---------------- */
+  function start() {
+    if (running) return;
+    running = true;
+    const loop = () => { if (!running) return; step(); rafId = requestAnimationFrame(loop); };
+    rafId = requestAnimationFrame(loop);
+  }
+  function stop() {
+    running = false;
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = 0;
+  }
+
+  if (reduceMotion) {
+    resize();
+    paintHud([], []);
+  } else {
+    resize();
+    start();
+    // 首屏滚出视野或标签页隐藏时停掉，不做无谓渲染
+    new IntersectionObserver(
+      (es) => es.forEach((en) => (en.isIntersecting && !document.hidden ? start() : stop())),
+      { threshold: 0 }
+    ).observe(hero);
+    document.addEventListener("visibilitychange", () => (document.hidden ? stop() : start()));
+  }
+  window.addEventListener("resize", () => { resize(); });
+})();
+
+/* ============================================================================
+   二、顶栏配色：压在暗色首屏上 vs 滚过之后
+   ========================================================================== */
+(function () {
+  const top = document.getElementById("top");
+  const hero = document.getElementById("hero");
+  function sync() {
+    const past = window.scrollY > hero.offsetHeight - 78;
+    top.className = "top " + (past ? "on-light" : "on-dark");
+  }
+  sync();
+  window.addEventListener("scroll", sync, { passive: true });
+  window.addEventListener("resize", sync);
+})();
+
+/* ============================================================================
+   三、滚动入场
+   ========================================================================== */
+(function () {
+  const items = document.querySelectorAll(".rv");
+  if (!("IntersectionObserver" in window)) {
+    items.forEach((el) => el.classList.add("in"));
+    return;
+  }
+  const io = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((en) => {
+        if (!en.isIntersecting) return;
+        en.target.classList.add("in");
+        en.target.querySelectorAll("[data-w]").forEach((bar, i) => {
+          setTimeout(() => (bar.style.width = bar.dataset.w + "%"), 90 + i * 90);
+        });
+        io.unobserve(en.target);
+      });
+    },
+    { threshold: 0.22 }
+  );
+  items.forEach((el) => io.observe(el));
+
+  // 仪表环与总数独立观察：它们在 .rv 内部，但需要自己的时序
+  const card = document.querySelector(".score-card");
+  if (card) {
+    const io2 = new IntersectionObserver(
+      (es) => {
+        es.forEach((en) => {
+          if (!en.isIntersecting) return;
+          document.getElementById("gaugeArc").style.strokeDashoffset = String(402 * (1 - 3.4 / 5));
+          countTo(document.getElementById("gaugeNum"), 3.4, 2, 900);
+          io2.unobserve(en.target);
+        });
+      },
+      { threshold: 0.4 }
+    );
+    io2.observe(card);
+  }
+
+  function countTo(el, target, digits, dur) {
+    const t0 = performance.now();
+    (function tick(now) {
+      const p = Math.min(1, (now - t0) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = (target * eased).toFixed(digits);
+      if (p < 1) requestAnimationFrame(tick);
+    })(performance.now());
+  }
+})();
+
+/* ============================================================================
+   四、对照卡里的步骤时间线：滚进视野后逐行跑一遍
+   ========================================================================== */
+(function () {
+  const STEPS = [
+    { k: "检索", t: "查询向量化 · BGE-M3", ms: 63 },
+    { k: "检索", t: "混合召回 · 候选 20 条", ms: 41 },
+    { k: "检索", t: "精排 · 保留 5 条", ms: 188 },
+    { k: "模型", t: "四维评分 · 逐维给理由", ms: 4180 },
+  ];
+  const host = document.getElementById("trace");
+  if (!host) return;
+
+  host.innerHTML = STEPS.map(
+    (s, i) => `<div class="smi">
+      <span class="k ${s.k}">${s.k}</span>
+      <span class="v">${s.t}</span>
+      <span class="m wait" data-m="${i}">运行中…</span>
+      <span class="trackline"><i data-b="${i}"></i></span>
+    </div>`
+  ).join("");
+
+  let played = false;
+  function play() {
+    if (played) return;
+    played = true;
+    const total = STEPS.reduce((a, s) => a + s.ms, 0);
+    STEPS.forEach((s, i) => {
+      setTimeout(() => {
+        const bar = host.querySelector(`[data-b="${i}"]`);
+        bar.style.height = "3px";
+        // 宽度按该步在总耗时中的真实占比，不是等分
+        bar.style.width = Math.max(6, (s.ms / total) * 100) + "%";
+        const m = host.querySelector(`[data-m="${i}"]`);
+        m.textContent = s.ms + " ms";
+        m.classList.remove("wait");
+      }, 140 + i * 210);
+    });
+  }
+
+  const io = new IntersectionObserver(
+    (es) => es.forEach((en) => en.isIntersecting && play()),
+    { threshold: 0.5 }
+  );
+  io.observe(host);
+})();
+
+/* ============================================================================
+   五、数据飞轮：六环排成环，弧线指向当前环
+   ========================================================================== */
+(function () {
+  const WHEEL = [
+    { ic: "▸", lb: "作答", title: "用户写下回答",
+      body: "在刷题训练里对一道题作答。这一步同时产生两样东西：一次评分请求，和一条未来的训练样本 —— 这是整条飞轮的入口。",
+      tag: "入口", fact: "作答文本、题目 id 与方向/难度/题型一起进入评分链路。" },
+    { ic: "◈", lb: "四维评分", title: "按 rubric 逐维评分",
+      body: "正确性 0.40 / 完整性 0.30 / 表达与结构 0.15 / 术语准确性 0.15，每一维都必须给出评分理由与改进建议。系统不允许返回裸分数。",
+      tag: "评分", fact: "结构化输出由服务端约束解码保证合法，字段再由 schema 校验。" },
+    { ic: "▤", lb: "落库", title: "一条记录，三条下游",
+      body: "(题目, 作答, 四维评分) 落进作答表。同一份数据被三个地方取用：错题本排期、能力画像聚合、微调数据集 —— 不需要为任何一个另做一套采集。",
+      tag: "存储", fact: "作答会挂到具体题目 id 上；缺 id 时宁可不记录，也不挂到错的题上。" },
+    { ic: "★", lb: "错题排期", title: "SM-2 间隔重复",
+      body: "quality 直接取四维加权总分四舍五入 —— 评分量表本身就是 0 到 5，天然对齐，不用另做映射。连续答对 2 次才毕业移出错题本。",
+      tag: "复习", fact: "答对一次就移出的话，刚排的复习计划永远不会触发。" },
+    { ic: "⌗", lb: "导出样本", title: "导出 SFT 数据集",
+      body: "把作答记录导出为 LLaMA-Factory 的训练格式。导出用的 prompt 必须与线上逐字一致，否则训推不一致 —— 微调学到的是另一个任务的分布。",
+      tag: "数据", fact: "导出时会打印总分分布；全挤在中档说明数据没区分度，微调学不出东西。" },
+    { ic: "⇄", lb: "微调评分器", title: "让本地小模型学会这套 rubric",
+      body: "用系统自己产出的评分记录做 LoRA 微调，让小模型按同一套 rubric 输出同样的结构化结果。评测口径：与人工标注的一致率（±1 分内算一致）+ 每维 MAE。",
+      tag: "微调", fact: "评测固定读运行时的模型配置，避免拿过期配置去测另一个模型。" },
+  ];
+
+  const ring = document.getElementById("ring");
+  const C = 190, R = 132, CIRC = 2 * Math.PI * R;
+  let active = 0;
+
+  // 节点按环均分，并把它们钉在圆周上
+  WHEEL.forEach((w, i) => {
+    const ang = (i / WHEEL.length) * Math.PI * 2 - Math.PI / 2;
+    const x = C + Math.cos(ang) * R;
+    const y = C + Math.sin(ang) * R;
+    const b = document.createElement("button");
+    b.className = "wnode";
+    b.type = "button";
+    b.dataset.i = String(i);
+    b.style.left = (x / 380 * 100) + "%";
+    b.style.top = (y / 380 * 100) + "%";
+    b.innerHTML = `<span class="ic">${w.ic}</span><span class="lb">${w.lb}</span>`;
+    ring.appendChild(b);
+  });
+
+  const nodes = [...ring.querySelectorAll(".wnode")];
+  const hi = document.getElementById("ringHi");
+
+  function paint() {
+    nodes.forEach((b, i) => b.setAttribute("aria-pressed", String(i === active)));
+    const w = WHEEL[active];
+    document.getElementById("ringNum").textContent = String(active + 1).padStart(2, "0");
+    document.getElementById("ringCap").textContent = w.tag;
+    document.getElementById("w-title").textContent = w.title;
+    document.getElementById("w-body").textContent = w.body;
+    document.getElementById("w-fact").innerHTML = `<b>${w.tag}</b> · ${w.fact}`;
+
+    // 高亮弧从节点 0 画到当前节点。SVG 的 rotate(-90) 已经由 viewBox 对齐，
+    // 这里按「顺时针累积」算长度，转成 dasharray 就是一段可见的弧。
+    const seg = CIRC / WHEEL.length;
+    const len = active === 0 ? seg * 0.34 : seg * (active + 0.34);
+    hi.setAttribute("stroke-dasharray", `${len} ${CIRC}`);
+  }
+
+  ring.addEventListener("click", (e) => {
+    const b = e.target.closest(".wnode");
+    if (!b) return;
+    active = Number(b.dataset.i);
+    paint();
+  });
+
+  paint();
+})();
+</script>
+</body>
+</html>

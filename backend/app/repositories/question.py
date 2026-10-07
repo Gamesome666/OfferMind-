@@ -107,3 +107,10 @@ async def delete(db: AsyncSession, question_id: int) -> bool:
 async def count(db: AsyncSession) -> int:
     """题库总题数。"""
     return int((await db.execute(select(func.count()).select_from(Question))).scalar_one())
+
+
+async def count_by_direction(db: AsyncSession) -> dict[str, int]:
+    """按技术方向统计题量，供后台概览的方向分布图用。"""
+    stmt = select(Question.direction, func.count()).group_by(Question.direction)
+    rows = await db.execute(stmt)
+    return {d: int(n) for d, n in rows.all()}

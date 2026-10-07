@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>模型与检索配置 · OfferMind</title>
+<link rel="stylesheet" href="assets/tokens.css" />
+<style>
+  .side { position: sticky; top: 20px; display: grid; gap: 16px; }
+
+  .cfgrow {
+    display: grid; grid-template-columns: minmax(0,1fr) minmax(280px, 400px);
+    gap: 22px; padding: 16px; border-bottom: 1px solid var(--border);
+  }
+  .cfgrow:last-child { border-bottom: 0; }
+  @media (max-width: 1000px) { .cfgrow { grid-template-columns: minmax(0,1fr); } }
+  .cfgrow .lb { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 560; }
+  .cfgrow .key { font-family: var(--font-mono); font-size: 10.5px; color: var(--faint); margin-top: 3px; }
+  .cfgrow .ds { font-size: 12.5px; line-height: 1.62; color: var(--muted); margin-top: 7px; max-width: 62ch; }
+  .cfgrow .ctl { display: grid; gap: 7px; align-content: start; }
+  .cfgrow .meta { display: flex; align-items: center; gap: 10px; font-size: 11.5px; color: var(--muted); }
+  .cfgrow .meta code { font-size: 11px; }
+  .cfgrow.changed { background: var(--accent-soft); }
+
+  .grouphead {
+    display: flex; align-items: center; gap: 10px; padding: 13px 16px;
+    background: var(--surface-2); border-bottom: 1px solid var(--border);
+  }
+  .grouphead .ic {
+    width: 24px; height: 24px; border-radius: var(--r-xs); display: grid; place-items: center;
+    background: var(--brand-soft); color: var(--brand); font-family: var(--font-mono); font-size: 12px;
+  }
+  .grouphead .t { font-size: 13px; font-weight: 600; }
+  .grouphead .d { font-size: 11.5px; color: var(--muted); }
+
+  /* 网关拓扑 */
+  .topo { display: grid; gap: 0; }
+  .node {
+    display: grid; grid-template-columns: 10px minmax(0,1fr) auto; gap: 12px; align-items: center;
+    padding: 11px 13px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface);
+  }
+  .node.primary { border-color: var(--accent-line); background: var(--accent-soft); }
+  .node .nm { font-family: var(--font-mono); font-size: 12.5px; font-weight: 520; }
+  .node .md { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); margin-top: 3px; }
+  .link { display: grid; place-items: center; padding: 3px 0; }
+  .link svg { overflow: visible; }
+  .fblabel {
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em;
+    color: oklch(44% 0.11 72); background: var(--warn-soft); border-radius: var(--r-xs); padding: 1px 6px;
+  }
+
+  /* 基准表 */
+  .bench { display: grid; gap: 0; }
+  .bench .r {
+    display: grid; grid-template-columns: minmax(0,1fr) repeat(3, 62px);
+    gap: 10px; align-items: center; padding: 9px 14px; border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono); font-size: 12px;
+  }
+  .bench .r:last-child { border-bottom: 0; }
+  .bench .r.h { background: var(--surface-2); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .bench .r span:not(:first-child) { text-align: right; }
+  .bench .r.best { background: var(--accent-soft); }
+
+  .preset {
+    display: grid; gap: 4px; padding: 9px 11px; border: 1px solid var(--border);
+    border-radius: var(--r-sm); cursor: pointer; transition: border-color .13s, background .13s;
+  }
+  .preset:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .preset .t { font-size: 12.5px; font-weight: 540; }
+  .preset .u { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); }
+  .preset .nt { font-size: 11px; color: var(--faint); line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div id="rail-slot"></div>
+
+  <main class="main">
+    <div class="page">
+
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Admin · 运行时配置</div>
+          <div class="title-row" style="margin-top:7px">
+            <h1 class="h1">模型与检索配置</h1>
+            <span class="pill accent"><span class="dot done"></span>改完即时生效 · 无需重启</span>
+          </div>
+          <p class="lead" style="margin-top:8px;font-size:14px">
+            这里改动的是<b>运行时生效值</b>，不必重启服务。所有可调项集中登记在一处，
+            新增一项只改那一处，页面上的表单会自动出现。
+          </p>
+        </div>
+        <div class="actions">
+          <button class="btn" id="btn-reload">丢弃改动</button>
+          <button class="btn btn-primary" id="btn-save">保存配置</button>
+        </div>
+      </div>
+
+      <div class="grid g-main-side">
+
+        <!-- ===== 左：配置表单 ===== -->
+        <div class="stack">
+          <section class="card" data-od-id="admin-config-card-01" id="cfgcard" style="overflow:hidden">
+            <div class="card-head">
+              <div class="h3">配置项</div>
+              <span class="small" id="cfg-ep">改完即时生效</span>
+            </div>
+            <div id="cfglist"></div>
+            <div class="card-foot">
+              <span class="small" id="ovr">—</span>
+              <span class="small">下一次 Agent 执行即读到新值</span>
+            </div>
+          </section>
+        </div>
+
+        <!-- ===== 右：网关 + 基准 ===== -->
+        <div class="side">
+          <section class="card" data-od-id="admin-config-card-02">
+            <div class="card-head">
+              <div class="h3">LiteLLM 网关路由</div>
+              <span class="pill" id="gw-state">—</span>
+            </div>
+            <div class="card-body">
+              <div class="topo" id="topo"></div>
+              <p class="hint mt-3">
+                网关是<b>进程内 Router</b>（默认关）。部署列表解析不出来时静默回落直连 ——
+                配置写坏不会拖垮服务。
+              </p>
+            </div>
+            <div class="card-foot">
+              <span class="small">密钥不回显 · 空值表示不修改</span>
+              <span class="pill">多部署 + 回退</span>
+            </div>
+          </section>
+
+          <section class="card" data-od-id="admin-config-card-03">
+            <div class="card-head"><div class="h3">实测延迟基线</div><span class="pill">云端已实测</span></div>
+            <div class="card-body tight">
+              <div class="bench" id="bench"></div>
+            </div>
+            <div class="card-foot">
+              <span class="small">固定 prompt 长度保证可比，区分首 token 与总延迟</span>
+            </div>
+          </section>
+
+          <section class="card" data-od-id="admin-config-card-04">
+            <div class="card-head"><div class="h3">评分器微调对比</div><span class="pill">待跑</span></div>
+            <div class="card-body">
+              <div class="stack-sm" style="font-size:12.5px" id="ft"></div>
+              <p class="hint mt-3">对比口径：与人工标注的一致率（±1 分内算一致）+ 每维 MAE。评测固定读运行时的模型配置，避免拿到过期配置去测另一个模型。</p>
+            </div>
+          </section>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="assets/app.js"></script>
+<script src="assets/api-real.js"></script>
+<script>
+(async function () {
+  Om.mount("admin-config");
+  const $ = (s) => document.querySelector(s);
+  let cfg = [];
+  /** 从 /admin/llm/options 拿到的服务商预置与实时模型列表（懒加载一次） */
+  let options = null;
+  const draft = {};
+
+  const GROUPS = [
+    { id: "llm", ic: "◈", t: "模型接入", d: "端点 / 密钥 / 模型名 / 温度", keys: ["llm_base_url", "llm_api_key", "llm_model", "llm_temperature"] },
+    { id: "rag", ic: "⌗", t: "检索策略", d: "召回条数 / 检索模式 / 精排 / 查重阈值", keys: ["retrieval_top_k", "retrieval_mode", "retrieval_use_rerank", "question_dup_threshold"] },
+    { id: "gw", ic: "⇄", t: "网关路由", d: "多部署 + 失败回退", keys: ["llm_gateway_enabled", "llm_gateway_deployments", "llm_gateway_primary", "llm_gateway_fallbacks"] },
+  ];
+
+  async function loadOptions(force) {
+    if (options && !force) return options;
+    try {
+      options = await Om.api("GET", "/api/v1/admin/llm/options");
+    } catch (ex) {
+      options = { presets: [], source: "fallback", models: [], error: ex.message || String(ex) };
+    }
+    return options;
+  }
+
+  function control(it) {
+    const v = draft[it.key] !== undefined ? draft[it.key] : it.value;
+    switch (it.kind) {
+      case "bool":
+        return `<div class="row" style="gap:10px">
+          <button class="switch" role="switch" aria-checked="${(v === "1" || v === "true")}" data-sw="${it.key}"></button>
+          <span class="small mono" data-swtxt="${it.key}">${(v === "1" || v === "true") ? "已启用" : "已关闭"}</span>
+        </div>`;
+      case "select": {
+        // 端点上可能已经有当前值但不在候选列表里（比如手工填过），补进去免得下拉显示成别的
+        const opts = it.options.includes(v) ? it.options : [v, ...it.options];
+        return `<select class="select" data-k="${it.key}">
+          ${opts.map((o) => `<option${o === v ? " selected" : ""}>${o}</option>`).join("")}
+        </select>`;
+      }
+      case "secret":
+        return `<input class="input mono" type="password" data-k="${it.key}"
+          placeholder="${it.has_value ? "已保存，留空表示不修改" : "尚未配置"}" autocomplete="new-password" />
+          <span class="hint">页面不回显密钥明文。清空请用「恢复默认」删掉这条覆盖记录。</span>`;
+      case "number":
+        return `<input class="input mono" type="number" step="0.01" data-k="${it.key}" value="${v}" />`;
+      case "textarea":
+        return `<textarea class="textarea mono" data-k="${it.key}" style="min-height:110px;font-size:11.5px">${v}</textarea>`;
+      default:
+        return `<input class="input mono" data-k="${it.key}" value="${v}" />`;
+    }
+  }
+
+  function truncate(s) {
+    return s && s.length > 34 ? s.slice(0, 34) + "…" : s || "（空）";
+  }
+
+  function render() {
+    $("#cfglist").innerHTML = GROUPS.map((g) => {
+      const items = g.keys.map((k) => cfg.find((c) => c.key === k)).filter(Boolean);
+      if (!items.length) return "";
+      return `<div class="grouphead"><span class="ic">${g.ic}</span>
+          <span class="grow"><span class="t">${g.t}</span><span class="d" style="display:block">${g.d}</span></span>
+          <span class="pill">${items.length} 项</span>
+        </div>
+        ${items
+          .map((it) => {
+            const dirty = draft[it.key] !== undefined && draft[it.key] !== it.value;
+            return `<div class="cfgrow${dirty ? " changed" : ""}" data-row="${it.key}">
+            <div>
+              <div class="lb">${it.label}
+                ${it.overridden ? '<span class="pill accent">已覆盖 .env</span>' : '<span class="pill">默认值</span>'}
+              </div>
+              <div class="key">${it.key}</div>
+              <div class="ds">${it.description}</div>
+              ${it.key === "llm_base_url" ? `<div class="mt-3" id="presets" style="display:grid;gap:6px;max-width:420px"></div>` : ""}
+            </div>
+            <div class="ctl">
+              ${control(it)}
+              <div class="meta">
+                ${it.kind === "secret" ? "" : `<span>默认：<code class="mono">${truncate(it.default)}</code></span>`}
+                ${it.overridden ? `<button class="btn btn-sm btn-ghost" data-reset="${it.key}">恢复默认</button>` : ""}
+                  ${it.key === "llm_model" ? `<button class="btn btn-sm" data-pull>拉取模型列表</button>` : ""}
+              </div>
+              ${it.key === "llm_model" ? `<span class="hint" data-pullout></span>` : ""}
+            </div>
+          </div>`;
+          })
+          .join("")}`;
+    }).join("");
+
+    const ovr = cfg.filter((c) => c.overridden).length;
+    $("#ovr").textContent = `${cfg.length} 个配置项 · ${ovr} 项被覆盖（写库）· 其余走 .env 默认值`;
+
+    renderPresets();
+    renderTopo();
+    renderBench();
+  }
+
+  /** 服务商预置：点一下把端点填好，省得手写 base_url（少写 /v1 就会 404） */
+  async function renderPresets() {
+    const host = $("#presets");
+    if (!host) return;
+    const opts = await loadOptions();
+    host.innerHTML = opts.presets.length
+      ? opts.presets
+          .map(
+            (p) =>
+              `<div class="preset" data-url="${p.base_url}"><span class="t">${p.label}</span><span class="u">${p.base_url}</span><span class="nt">${p.note || ""}</span></div>`
+          )
+          .join("")
+      : "";
+    host.onclick = (e) => {
+      const el = e.target.closest(".preset");
+      if (!el) return;
+      draft["llm_base_url"] = el.dataset.url;
+      render();
+      Om.toast("info", "已填入端点", el.dataset.url);
+    };
+  }
+
+  /* ---------------- 网关拓扑 ---------------- */
+  function renderTopo() {
+    const cfgOf = (k) => (cfg.find((c) => c.key === k) || {}).value;
+    const enabled = (draft["llm_gateway_enabled"] ?? cfgOf("llm_gateway_enabled")) === "1";
+    $("#gw-state").className = "pill " + (enabled ? "accent" : "");
+    $("#gw-state").innerHTML = enabled ? '<span class="dot done"></span>已启用' : '<span class="dot"></span>直连模式';
+
+    const raw = draft["llm_gateway_deployments"] ?? cfgOf("llm_gateway_deployments");
+    let deps = [];
+    try { deps = JSON.parse(raw); } catch (e) { deps = null; }
+
+    if (!enabled) {
+      $("#topo").innerHTML = `<div class="node">
+        <span class="dot done"></span>
+        <div><div class="nm">${cfgOf("llm_model")}</div>
+        <div class="md">直连 ${cfgOf("llm_base_url")} · 不走网关</div></div>
+        <span class="pill">primary</span>
+      </div>`;
+      return;
+    }
+    if (!deps || !Array.isArray(deps) || !deps.length) {
+      $("#topo").innerHTML = `<div class="warnbox" style="display:flex;gap:10px;padding:11px 13px;border-radius:6px;background:var(--warn-soft);border:1px solid oklch(68% 0.15 72 / .32);font-size:12.5px">
+        <span>⚠</span><span>部署列表不是合法 JSON 数组 —— 网关会静默回落直连，服务不受影响。</span></div>`;
+      return;
+    }
+    const primary = draft["llm_gateway_primary"] ?? cfgOf("llm_gateway_primary");
+    const order = [deps.find((d) => d.name === primary) || deps[0], ...deps.filter((d) => d.name !== (primary || deps[0].name))];
+    $("#topo").innerHTML = order
+      .map((d, i) => {
+        const isPrimary = i === 0;
+        return `${i > 0 ? `<div class="link"><span class="fblabel">失败回退 ↓</span></div>` : ""}
+        <div class="node ${isPrimary ? "primary" : ""}">
+          <span class="dot ${isPrimary ? "running" : "done"}"></span>
+          <div><div class="nm">${d.name}</div><div class="md">${d.model}</div><div class="md">${d.api_base || ""}</div></div>
+          <span class="pill ${isPrimary ? "accent" : ""}">${isPrimary ? "primary" : "fallback"}</span>
+        </div>`;
+      })
+      .join("");
+  }
+
+  /* ---------------- 基准表 ----------------
+     这些数字来自 backend/benchmark/*.json 与 finetune/eval/*.json，
+     没跑过就显示「待测」，不编造。云端那一行是 scripts/bench_llm.py 的实测值。
+  */
+  const BENCH = {
+    cloud: { p50: "3.74", p95: "5.45", p99: "5.55" },
+  };
+
+  function renderBench() {
+    const na = '<span style="color:var(--faint)">待测</span>';
+    $("#bench").innerHTML = `
+      <div class="r h"><span>部署形态</span><span>P50</span><span>P95</span><span>P99</span></div>
+      <div class="r best"><span>云端 API（已实测）</span><span>${BENCH.cloud.p50}s</span><span>${BENCH.cloud.p95}s</span><span>${BENCH.cloud.p99}s</span></div>
+      <div class="r"><span>vLLM 本地 fp16</span>${na}${na}${na}</div>
+      <div class="r"><span>vLLM 本地 AWQ-4bit</span>${na}${na}${na}</div>
+      <div class="r"><span>vLLM 本地 GPTQ</span>${na}${na}${na}</div>`;
+
+    $("#ft").innerHTML = `
+      <div class="row-between"><span class="dim">一致率（微调前 → 微调后）</span><span class="mono" style="color:var(--faint)">待跑</span></div>
+      <div class="row-between"><span class="dim">每维 MAE（微调前 → 微调后）</span><span class="mono" style="color:var(--faint)">待跑</span></div>
+      <div class="row-between"><span class="dim">基座 / 方法</span><span class="mono">Qwen2.5-1.5B + LoRA</span></div>
+      <div class="row-between"><span class="dim">训练数据来源</span><span class="mono">answers 表（评分自动累积）</span></div>
+      <div class="row-between"><span class="dim">导出 / 评测脚本</span><span class="mono">scripts/export_sft_dataset.py · eval_grader.py</span></div>`;
+  }
+
+  /* ---------------- 交互 ---------------- */
+  $("#cfgcard").addEventListener("click", async (e) => {
+    const sw = e.target.closest("[data-sw]");
+    if (sw) {
+      const k = sw.dataset.sw;
+      const on = sw.getAttribute("aria-checked") === "true";
+      draft[k] = on ? "0" : "1";
+      render();
+      return;
+    }
+    const rst = e.target.closest("[data-reset]");
+    if (rst) {
+      const k = rst.dataset.reset;
+      const it = cfg.find((c) => c.key === k);
+      const ok = await Om.confirm({
+        title: "恢复默认值",
+        msg: `删除 ${it.label} 在数据库中的覆盖记录，回到 .env 的默认值。`,
+        detail: `<div class="mono small" style="padding:10px 12px;background:var(--surface-2);border-radius:6px">${truncate(it.default)}</div>`,
+        ok: "恢复默认",
+      });
+      if (!ok) return;
+      try {
+        // DELETE /api/v1/admin/config/{key} —— 返回刷新后的整份配置
+        cfg = await Om.api("DELETE", `/api/v1/admin/config/${k}`);
+        delete draft[k];
+        render();
+        Om.toast("ok", "已恢复默认", `${it.label} 现在走 .env 默认值`);
+      } catch (ex) {
+        Om.toast("err", "恢复失败", ex.message || String(ex));
+      }
+      return;
+    }
+    const pull = e.target.closest("[data-pull]");
+    if (pull) {
+      const out = $("#cfgcard").querySelector("[data-pullout]");
+      out.textContent = "拉取中…";
+      const opts = await loadOptions(true);
+      // 拉取用的是数据库里当前生效的端点，可能还没保存草稿，所以这里说明一下
+      const usingDraft = draft["llm_base_url"] && draft["llm_base_url"] !== cfg.find((c) => c.key === "llm_base_url").value;
+      out.innerHTML =
+        opts.source === "live"
+          ? `<span style="color:var(--accent-ink)">已从端点拉到 ${opts.models.length} 个模型</span> · ${opts.models.join(" / ")}`
+          : `<span style="color:oklch(44% 0.11 72)">端点拉取失败，已降级为静态候选：${opts.error || "未知原因"}</span>`;
+      if (usingDraft) {
+        out.innerHTML += `<br><span style="color:oklch(44% 0.11 72)">注意：拉取用的是已保存的端点（${opts.base_url}）。改过 Base URL 请先保存再拉。</span>`;
+      }
+      const sel = $("#cfgcard").querySelector('select[data-k="llm_model"]');
+      if (sel && opts.models.length) {
+        const cur = draft["llm_model"] ?? cfg.find((c) => c.key === "llm_model").value;
+        const list = opts.models.includes(cur) ? opts.models : [cur, ...opts.models];
+        sel.innerHTML = list.map((m) => `<option${m === cur ? " selected" : ""}>${m}</option>`).join("");
+      }
+      Om.toast(
+        opts.source === "live" ? "ok" : "info",
+        opts.source === "live" ? "模型列表已刷新" : "已降级到静态候选",
+        opts.source === "live" ? `来源：${opts.base_url}` : opts.error || ""
+      );
+    }
+  });
+
+  $("#cfgcard").addEventListener("change", (e) => {
+    const el = e.target.closest("[data-k]");
+    if (!el) return;
+    draft[el.dataset.k] = el.value;
+    render();
+  });
+  $("#cfgcard").addEventListener("input", (e) => {
+    const el = e.target.closest("textarea[data-k], input[data-k]");
+    if (!el || el.tagName === "SELECT") return;
+    draft[el.dataset.k] = el.value;
+    renderTopo();
+  });
+
+  /* ---------------- 保存 ---------------- */
+  $("#btn-save").addEventListener("click", async () => {
+    const keys = Object.keys(draft);
+    if (!keys.length) return Om.toast("info", "没有改动", "改一项配置再保存。");
+
+    const specs = cfg.reduce((m, c) => ((m[c.key] = c), m), {});
+    const values = {};
+    let skipped = 0;
+    keys.forEach((k) => {
+      const spec = specs[k];
+      if (!spec) return;
+      // 密钥留空 = 不修改。后端也按这个语义处理，这里提前过滤掉避免把空串写进库
+      if (spec.kind === "secret" && !draft[k]) { skipped += 1; return; }
+      values[k] = draft[k];
+    });
+    if (!Object.keys(values).length) {
+      return Om.toast("info", "没有需要保存的改动", skipped ? `${skipped} 项密钥留空，表示沿用已保存的值` : "");
+    }
+
+    try {
+      // PUT /api/v1/admin/config —— 返回刷新后的整份配置
+      cfg = await Om.api("PUT", "/api/v1/admin/config", { values });
+      Object.keys(draft).forEach((k) => delete draft[k]);
+      render();
+      Om.toast(
+        "ok",
+        "配置已生效",
+        `${Object.keys(values).length} 项已更新${skipped ? ` · ${skipped} 项密钥留空未修改` : ""} · 缓存已失效，下一次 Agent 执行即读到新值`
+      );
+    } catch (ex) {
+      Om.toast("err", "保存失败", ex.message || String(ex));
+    }
+  });
+
+  $("#btn-reload").addEventListener("click", async () => {
+    Object.keys(draft).forEach((k) => delete draft[k]);
+    try {
+      cfg = await Om.api("GET", "/api/v1/admin/config");
+    } catch (ex) {
+      Om.toast("err", "重新加载失败", ex.message || String(ex));
+      return;
+    }
+    render();
+    Om.toast("info", "已丢弃改动", "表单回到数据库中的当前生效值");
+  });
+
+  try {
+    cfg = await Om.api("GET", "/api/v1/admin/config");
+    render();
+  } catch (ex) {
+    Om.toast("err", "配置加载失败", ex.message || String(ex));
+  }
+})().catch((e) => Om.toast("err", "页面初始化失败", e.message || String(e)));
+</script>
+</body>
+</html>

@@ -78,17 +78,30 @@ async def list_sessions(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
-    """列出当前用户的面试会话（历史侧栏用）。"""
+    """列出当前用户的面试会话（历史侧栏用）。
+
+    顺带带出「轮数」与「总分」——列表卡片要显示这两个数，不带的话前端得为每场面试
+    再查两次接口。
+    """
     sessions = await interview_repo.list_sessions(db, current_user.id)
-    return [
-        {
-            "id": s.id,
-            "status": s.status,
-            "config": json.loads(s.config_json or "{}"),
-            "updated_at": s.updated_at,
-        }
-        for s in sessions
-    ]
+    rounds = await interview_repo.count_hr_by_sessions(db, [s.id for s in sessions])
+    out: list[dict] = []
+    for s in sessions:
+        try:
+            report = json.loads(s.report_json or "{}")
+        except json.JSONDecodeError:
+            report = {}
+        out.append(
+            {
+                "id": s.id,
+                "status": s.status,
+                "config": json.loads(s.config_json or "{}"),
+                "updated_at": s.updated_at,
+                "rounds": rounds.get(s.id, 0),
+                "total_score": report.get("total_score"),
+            }
+        )
+    return out
 
 
 @router.get("/sessions/{session_id}")

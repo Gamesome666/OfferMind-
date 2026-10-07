@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>能力报告 · OfferMind</title>
+<link rel="stylesheet" href="assets/tokens.css" />
+<style>
+  .side { position: sticky; top: 20px; display: grid; gap: 16px; }
+  .rep-hero { display: grid; grid-template-columns: 216px minmax(0,1fr); gap: 26px; align-items: center; }
+  @media (max-width: 820px) { .rep-hero { grid-template-columns: minmax(0,1fr); } }
+  .verdict { font-size: 14px; line-height: 1.72; color: var(--fg-2); }
+  .verdict b { color: var(--fg); font-weight: 560; }
+
+  .kp-row {
+    display: grid; grid-template-columns: minmax(0,1fr) 88px 96px; gap: 14px; align-items: center;
+    padding: 11px 16px; border-bottom: 1px solid var(--border);
+  }
+  .kp-row:last-child { border-bottom: 0; }
+  .kp-row:hover { background: var(--surface-2); }
+  .kp-row .nm { font-size: 13px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+  .kp-row .pct { font-family: var(--font-mono); font-size: 13px; text-align: right; }
+  .kp-row .dims { display: flex; gap: 4px; justify-content: flex-end; }
+  .kp-row .dims span {
+    font-family: var(--font-mono); font-size: 10.5px; padding: 1px 5px;
+    border-radius: var(--r-xs); background: var(--surface-3); color: var(--fg-2);
+  }
+
+  .srcpick { display: grid; gap: 8px; }
+  .src {
+    display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 10px; align-items: center;
+    padding: 11px 13px; border: 1px solid var(--border); border-radius: var(--r-sm);
+    background: var(--surface); cursor: pointer; transition: border-color .13s, background .13s;
+  }
+  .src:hover { border-color: var(--border-strong); }
+  .src.on { border-color: var(--accent); background: var(--accent-soft); }
+  .src .t { font-size: 12.5px; line-height: 1.5; }
+  .src .m { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); margin-top: 3px; }
+
+  .notes { display: grid; gap: 10px; }
+  .notes li { display: grid; grid-template-columns: 20px minmax(0,1fr); gap: 10px; font-size: 13px; line-height: 1.65; color: var(--fg-2); }
+  .notes li .b {
+    width: 20px; height: 20px; border-radius: var(--r-xs); display: grid; place-items: center;
+    font-family: var(--font-mono); font-size: 10px;
+  }
+  .notes.bad li .b { background: var(--warn-soft); color: oklch(44% 0.11 72); }
+  .notes.good li .b { background: var(--success-soft); color: var(--success); }
+
+  .kv { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+  .kv .cell { border: 1px solid var(--border); border-radius: var(--r-sm); padding: 10px 12px; }
+  .kv .cell .k { font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .kv .cell .v { font-family: var(--font-mono); font-size: 18px; margin-top: 4px; letter-spacing: -0.02em; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div id="rail-slot"></div>
+
+  <main class="main">
+    <div class="page">
+
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Report · 训练报告与长期能力画像</div>
+          <div class="title-row" style="margin-top:7px">
+            <h1 class="h1">能力报告</h1>
+            <span class="pill" id="src-pill">训练报告</span>
+          </div>
+          <p class="lead" style="margin-top:8px;font-size:14px">
+            单次报告回答「这一次答得怎么样」，能力画像回答「这一个月我长进了没有」。
+            画像数据来自每一条作答记录的四维分数聚合。
+          </p>
+        </div>
+        <div class="actions">
+          <button class="btn" id="btn-profile">重新聚合画像</button>
+          <button class="btn btn-primary" id="btn-gen">生成报告</button>
+        </div>
+      </div>
+
+      <div class="grid g-main-side">
+
+        <!-- ===== 左 ===== -->
+        <div class="stack">
+
+          <section class="card" data-od-id="report-card-01">
+            <div class="card-head">
+              <div class="h3">报告来源</div>
+              <div class="seg" id="mode">
+                <button data-v="training" aria-pressed="true">训练报告</button>
+                <button data-v="interview" aria-pressed="false">面试报告</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="srcpick" id="srcs"></div>
+              <div class="row-between mt-3">
+                <span class="hint" id="endpoint">基于选中的一次训练生成</span>
+                <button class="btn btn-accent" id="btn-gen2">生成报告</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- 报告正文 -->
+          <section class="card" data-od-id="report-card-02" id="rcard" style="display:none">
+            <div class="card-head">
+              <div class="h3" id="rep-title">报告</div>
+              <span class="pill" id="rep-badge">—</span>
+            </div>
+            <div class="card-body">
+              <div class="rep-hero">
+                <div id="rep-radar" style="display:grid;place-items:center"></div>
+                <div>
+                  <div class="eyebrow">总体评价</div>
+                  <p class="verdict mt-2" id="rep-summary"></p>
+                  <div class="kv mt-4" id="rep-kv"></div>
+                </div>
+              </div>
+
+              <hr class="hair" />
+              <div class="grid g-2">
+                <div>
+                  <div class="eyebrow">薄弱点</div>
+                  <ul class="notes bad mt-3" id="rep-weak"></ul>
+                </div>
+                <div>
+                  <div class="eyebrow">改进建议</div>
+                  <ul class="notes good mt-3" id="rep-sug"></ul>
+                </div>
+              </div>
+            </div>
+            <div class="card-foot">
+              <span class="small">报告生成后会写一条 history（module=report），侧栏可一键恢复现场</span>
+              <button class="btn btn-sm" id="btn-save">存入历史</button>
+            </div>
+          </section>
+
+          <!-- 能力画像 -->
+          <section class="card" data-od-id="report-card-03">
+            <div class="card-head">
+              <div class="h3">能力画像</div>
+              <div class="row">
+                <span class="pill" id="kp-n">6 个知识点</span>
+              </div>
+            </div>
+            <div class="card-body tight" id="kp-list"></div>
+            <div class="card-foot">
+              <span class="small">掌握度 = 该知识点下所有作答四维加权总分的归一化均值</span>
+              <button class="btn btn-sm" id="btn-add">手动更新画像</button>
+            </div>
+          </section>
+
+        </div>
+
+        <!-- ===== 右 ===== -->
+        <div class="side">
+          <div id="trace-slot"></div>
+
+          <section class="card" data-od-id="report-card-04">
+            <div class="card-head"><div class="h3">画像雷达</div><span class="pill">长期</span></div>
+            <div class="card-body" style="display:grid;place-items:center;padding:16px 10px">
+              <div id="radar" style="display:grid;place-items:center;width:100%"></div>
+            </div>
+          </section>
+
+          <section class="card" data-od-id="report-card-05">
+            <div class="card-head"><div class="h3">画像字段</div><span class="small">长期累积</span></div>
+            <div class="card-body">
+              <div class="stack-sm" style="font-size:12.5px">
+                <div class="row-between"><span class="dim">knowledge_point</span><span class="mono">String(128)</span></div>
+                <div class="row-between"><span class="dim">mastery</span><span class="mono">Float 0–1</span></div>
+                <div class="row-between"><span class="dim">dimension_scores</span><span class="mono">JSON 文本</span></div>
+                <div class="row-between"><span class="dim">唯一键</span><span class="mono">(user_id, knowledge_point)</span></div>
+              </div>
+              <p class="hint mt-3">upsert 语义：同一知识点重复更新会覆盖掌握度，不新增行。</p>
+            </div>
+          </section>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="assets/app.js"></script>
+<script src="assets/api-real.js"></script>
+<script>
+(async function () {
+  Om.mount("report");
+  document.getElementById("trace-slot").innerHTML = Om.tracePanel("trace", "等待执行");
+  const trace = Om.bindTrace("trace");
+  const $ = (s) => document.querySelector(s);
+
+  let mode = "training";
+  let picked = null;
+  /** 当前来源列表（训练模式带 history 快照，面试模式带会话摘要） */
+  let srcList = [];
+
+  function pushTrace(ev) {
+    if (ev && ev.id) trace.push(ev);
+  }
+
+  /* ---------------- 来源列表 ---------------- */
+  async function loadSources() {
+    try {
+      if (mode === "training") {
+        // 刷题历史里存了当时的题目/作答/评分快照，生成报告直接用，不用重跑模型
+        const hist = await Om.api("GET", "/api/v1/history");
+        srcList = hist
+          .filter((h) => h.module === "practice" || h.module === "report")
+          .map((h) => ({
+            id: h.id,
+            t: h.title,
+            m: `${String(h.updated_at).slice(0, 16).replace("T", " ")} · history #${h.id}`,
+            snap: h.snapshot || {},
+          }));
+      } else {
+        const sessions = await Om.api("GET", "/api/v1/interview/sessions");
+        srcList = sessions.map((s) => {
+          const c = s.config || {};
+          return {
+            id: s.id,
+            t: `${c.direction || "—"} · ${c.difficulty || "—"} · ${c.style || "—"}｜${s.rounds} 轮`,
+            m: `session #${s.id} · ${s.status === "finished" ? "已总结" : "进行中"}`,
+          };
+        });
+      }
+    } catch (ex) {
+      srcList = [];
+      Om.toast("err", "来源列表加载失败", ex.message || String(ex));
+    }
+    renderSrcs();
+  }
+
+  function renderSrcs() {
+    picked = srcList[0] ? srcList[0].id : null;
+    $("#srcs").innerHTML = srcList.length
+      ? srcList
+          .map(
+            (s) => `<div class="src${s.id === picked ? " on" : ""}" data-id="${s.id}">
+          <div><div class="t">${s.t}</div><div class="m">${s.m}</div></div>
+          <span class="pill${s.id === picked ? " accent" : ""}">${s.id === picked ? "选中" : "选择"}</span>
+        </div>`
+          )
+          .join("")
+      : `<div class="empty" style="border:0;background:transparent"><div class="d">${
+          mode === "training" ? "还没有训练记录。去刷题训练答一次题就会出现在这里。" : "还没有面试记录。去模拟面试聊一轮就会出现在这里。"
+        }</div></div>`;
+    $("#endpoint").textContent =
+      mode === "training" ? "基于选中的一次训练生成" : "基于选中的一场面试生成";
+    $("#src-pill").textContent = mode === "training" ? "训练报告" : "面试报告";
+    $("#btn-gen").disabled = $("#btn-gen2").disabled = !picked;
+  }
+
+  $("#srcs").addEventListener("click", (e) => {
+    const el = e.target.closest(".src");
+    if (!el) return;
+    picked = Number(el.dataset.id);
+    renderSrcs2();
+  });
+  function renderSrcs2() {
+    $("#srcs").querySelectorAll(".src").forEach((el) => {
+      const on = Number(el.dataset.id) === picked;
+      el.classList.toggle("on", on);
+      el.querySelector(".pill").className = "pill" + (on ? " accent" : "");
+      el.querySelector(".pill").textContent = on ? "选中" : "选择";
+    });
+  }
+
+  Om.seg($("#mode"), (v) => {
+    mode = v;
+    $("#rcard").style.display = "none";
+    loadSources();
+  });
+
+  /* ---------------- 生成报告 ---------------- */
+  async function generate() {
+    if (!picked) return Om.toast("err", "未选择来源", "先在上面选一条记录。");
+    trace.reset();
+    trace.live("running");
+
+    try {
+      if (mode === "training") {
+        const src = srcList.find((s) => s.id === picked);
+        const snap = (src && src.snap) || {};
+        const q = snap.question || {};
+        const score = snap.score || {};
+        const questionText = q.samples ? `${q.content}\n\n${q.samples}` : q.content || "";
+        if (!questionText) {
+          throw new Error("这条历史里没有题目快照，换一条（只有含作答快照的记录才能生成报告）");
+        }
+        const dims = ["correctness", "completeness", "clarity", "terminology"];
+        const summary =
+          dims.map((k) => `${k} ${(score[k] && score[k].score) ?? "—"}/5`).join("，") +
+          `，总分 ${score.total_score ?? "—"}`;
+
+        trace.setTitle("report/training/stream");
+        let out = null;
+        await Om.sseAsync("/api/v1/report/training/stream", {
+          body: {
+            question: questionText,
+            answer: snap.answer || "",
+            score_summary: summary,
+            followup: JSON.stringify(snap.followups || []),
+          },
+          onEvent: (ev) => {
+            pushTrace(ev);
+            if (ev.type === "结果") out = ev.payload;
+          },
+        });
+        if (!out) throw new Error("没有收到报告");
+        render(out, true);
+        Om.toast("ok", "报告已生成", "训练报告已就绪");
+      } else {
+        // 面试报告：先取会话的配置与逐轮对话，再让后端按整场对话总结
+        trace.setTitle("interview/report/stream");
+        const s = await Om.api("GET", `/api/v1/interview/sessions/${picked}`);
+        const c = s.config || {};
+        const configText = `方向：${c.direction || ""}；难度：${c.difficulty || ""}；风格：${c.style || ""}`;
+        const roundsText = s.messages
+          .map((m) => `${m.role === "hr" ? "面试官" : "候选人"}：${m.content}`)
+          .join("\n\n");
+        if (!roundsText) throw new Error("这场面试还没有对话内容");
+
+        let out = null;
+        await Om.sseAsync("/api/v1/interview/report/stream", {
+          body: { config: configText, rounds: roundsText },
+          onEvent: (ev) => {
+            pushTrace(ev);
+            if (ev.type === "结果") out = ev.payload;
+          },
+        });
+        if (!out) throw new Error("没有收到报告");
+        render(out, false);
+        Om.toast("ok", "报告已生成", `面试总分 ${out.total_score} / 100`);
+      }
+    } catch (ex) {
+      Om.toast("err", "生成失败", ex.message || String(ex));
+    } finally {
+      trace.live("done");
+    }
+  }
+  $("#btn-gen").addEventListener("click", generate);
+  $("#btn-gen2").addEventListener("click", generate);
+
+  let lastReport = null;
+  function render(rep, isTraining) {
+    lastReport = rep;
+    $("#rcard").style.display = "";
+    $("#rep-title").textContent = isTraining ? "训练报告" : "面试报告";
+    $("#rep-badge").textContent = isTraining ? `来源 history #${picked}` : `session #${picked}`;
+    $("#rep-badge").className = "pill " + (isTraining ? "" : "success");
+    $("#rep-radar").innerHTML = Om.radar(rep.radar, { size: 216 });
+
+    if (isTraining) {
+      $("#rep-summary").textContent = rep.summary;
+      $("#rep-weak").innerHTML = rep.weak_points.map((x) => `<li><span class="b">!</span><span>${x}</span></li>`).join("");
+      $("#rep-sug").innerHTML = rep.suggestions.map((x) => `<li><span class="b">✓</span><span>${x}</span></li>`).join("");
+      $("#rep-kv").innerHTML = `
+        <div class="cell"><div class="k">雷达维度</div><div class="v">${Object.keys(rep.radar).length}</div></div>
+        <div class="cell"><div class="k">薄弱点</div><div class="v">${rep.weak_points.length}</div></div>
+        <div class="cell"><div class="k">建议数</div><div class="v">${rep.suggestions.length}</div></div>`;
+    } else {
+      $("#rep-summary").textContent = rep.overall_comment;
+      $("#rep-weak").innerHTML = rep.round_feedback.map((x) => `<li><span class="b">!</span><span>${x}</span></li>`).join("");
+      $("#rep-sug").innerHTML = rep.improvements.map((x) => `<li><span class="b">✓</span><span>${x}</span></li>`).join("");
+      $("#rep-kv").innerHTML = `
+        <div class="cell"><div class="k">总分</div><div class="v">${rep.total_score}</div></div>
+        <div class="cell"><div class="k">逐轮评价</div><div class="v">${rep.round_feedback.length}</div></div>
+        <div class="cell"><div class="k">雷达维度</div><div class="v">${Object.keys(rep.radar).length}</div></div>`;
+    }
+  }
+
+  $("#btn-save").addEventListener("click", async () => {
+    if (!lastReport) return Om.toast("err", "还没有报告", "先生成一份报告再存。");
+    try {
+      await Om.api("POST", "/api/v1/history", {
+        module: "report",
+        title: `${$("#rep-title").textContent}｜${$("#rep-badge").textContent}`,
+        snapshot: { report: lastReport, mode, sourceId: picked },
+      });
+      Om.toast("ok", "已存入历史", "侧栏「报告」分组下可以找到并恢复现场");
+    } catch (ex) {
+      Om.toast("err", "保存失败", ex.message || String(ex));
+    }
+  });
+
+  /* ---------------- 能力画像 ---------------- */
+  async function renderProfile() {
+    try {
+      const profile = await Om.api("GET", "/api/v1/report/profile");
+      const vals = {};
+      profile.forEach((p) => (vals[p.knowledge_point] = Math.round(p.mastery * 100)));
+      $("#radar").innerHTML = profile.length
+        ? Om.radar(vals, { size: 268 })
+        : `<div class="empty" style="border:0;background:transparent"><div class="d">还没有画像数据。训练后在报告页点「存入历史」或手动添加知识点。</div></div>`;
+      $("#kp-n").textContent = `${profile.length} 个知识点`;
+
+      $("#kp-list").innerHTML = profile.length
+        ? profile
+            .slice()
+            .sort((a, b) => b.mastery - a.mastery)
+            .map((p) => {
+              const m = Math.round(p.mastery * 100);
+              const tone = m >= 70 ? "success" : m >= 55 ? "accent" : m >= 45 ? "warn" : "danger";
+              const d = p.dimension_scores || {};
+              return `<div class="kp-row">
+          <div>
+            <div class="nm">${p.knowledge_point}
+              <span class="pill ${tone}">
+                ${m >= 70 ? "已掌握" : m >= 55 ? "基本掌握" : m >= 45 ? "不稳固" : "待补强"}
+              </span>
+            </div>
+            <div class="bar"><i class="${tone}" style="width:${m}%"></i></div>
+          </div>
+          <div class="pct">${m}%</div>
+          <div class="dims">${Object.entries(d).map(([k, v]) => `<span title="${k}">${k.slice(0, 1)}${Number(v).toFixed(1)}</span>`).join("")}</div>
+        </div>`;
+            })
+            .join("")
+        : "";
+    } catch (ex) {
+      Om.toast("err", "画像加载失败", ex.message || String(ex));
+    }
+  }
+  await renderProfile();
+
+  $("#btn-profile").addEventListener("click", async () => {
+    await renderProfile();
+    Om.toast("ok", "画像已刷新", "数据来自 /report/profile");
+  });
+
+  /* ---------------- 手动更新画像 POST /report/profile ---------------- */
+  $("#btn-add").addEventListener("click", () => {
+    const m = Om.modal({
+      title: "手动更新能力画像",
+      body: `
+        <div class="form-row">
+          <div class="field">
+            <label class="label" for="kpn">知识点 <span class="req">*</span></label>
+            <input class="input" id="kpn" placeholder="如：MySQL 索引" />
+            <span class="hint">与已有知识点同名时会覆盖（upsert），不会新增一行。</span>
+          </div>
+          <div class="field">
+            <label class="label" for="kpv">掌握度 mastery <span class="cap">0 – 1</span></label>
+            <input class="input mono" id="kpv" type="number" min="0" max="1" step="0.01" value="0.6" />
+          </div>
+          <div class="field">
+            <label class="label">维度分 dimension_scores</label>
+            <div class="grid" style="grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">
+              <input class="input mono" data-dim="正确性" value="3.0" />
+              <input class="input mono" data-dim="完整性" value="2.8" />
+              <input class="input mono" data-dim="表达" value="3.5" />
+              <input class="input mono" data-dim="术语" value="3.6" />
+            </div>
+          </div>
+        </div>`,
+      foot: `<button class="btn" data-close>取消</button><button class="btn btn-primary" data-ok>保存</button>`,
+    });
+    m.el.querySelector("[data-ok]").addEventListener("click", async () => {
+      const kp = m.el.querySelector("#kpn").value.trim();
+      const mv = parseFloat(m.el.querySelector("#kpv").value);
+      if (!kp) return Om.toast("err", "知识点必填", "knowledge_point 是 upsert 的唯一键。");
+      if (!(mv >= 0 && mv <= 1)) return Om.toast("err", "掌握度越界", "mastery 必须在 0 到 1 之间。");
+      const dims = {};
+      m.el.querySelectorAll("[data-dim]").forEach((i) => (dims[i.dataset.dim] = parseFloat(i.value) || 0));
+      try {
+        // POST /api/v1/report/profile —— upsert，由后端按 user_id 隔离
+        await Om.api("POST", "/api/v1/report/profile", {
+          knowledge_point: kp, mastery: mv, dimension_scores: dims,
+        });
+        m.close();
+        await renderProfile();
+        Om.toast("ok", "画像已更新", `${kp} · mastery = ${mv.toFixed(2)}`);
+      } catch (ex) {
+        Om.toast("err", "保存失败", ex.message || String(ex));
+      }
+    });
+  });
+
+  await loadSources();
+})().catch((e) => Om.toast("err", "页面初始化失败", e.message || String(e)));
+</script>
+</body>
+</html>

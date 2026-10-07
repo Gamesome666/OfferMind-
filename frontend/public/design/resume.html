@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="assets/tokens.css" />
+<title>简历诊断 · OfferMind</title>
+<style>
+  .side { position: sticky; top: 20px; display: grid; gap: 16px; }
+  .steps { display: grid; gap: 0; }
+  .step { display: grid; grid-template-columns: 26px minmax(0,1fr); gap: 13px; padding-bottom: 20px; position: relative; }
+  .step:last-child { padding-bottom: 0; }
+  .step::before {
+    content: ""; position: absolute; left: 12px; top: 26px; bottom: 0; width: 1px; background: var(--border);
+  }
+  .step:last-child::before { display: none; }
+  .step .n {
+    width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+    font-family: var(--font-mono); font-size: 11px; background: var(--surface-3);
+    color: var(--muted); border: 1px solid var(--border-strong); z-index: 1;
+  }
+  .step.on .n { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .step.done .n { background: var(--success-soft); border-color: var(--success); color: var(--success); }
+
+  .filechip {
+    display: flex; align-items: center; gap: 11px; padding: 11px 13px; margin-top: 12px;
+    border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface);
+  }
+  .filechip .ic {
+    width: 32px; height: 32px; border-radius: var(--r-xs); background: var(--danger-soft);
+    color: var(--danger); display: grid; place-items: center;
+    font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+  }
+  .filechip .nm { font-size: 13px; font-weight: 520; }
+  .filechip .sz { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+
+  /* 匹配度 */
+  .match { display: grid; grid-template-columns: 168px minmax(0,1fr); gap: 26px; align-items: center; }
+  @media (max-width: 760px) { .match { grid-template-columns: minmax(0,1fr); } }
+  .gauge { position: relative; width: 168px; height: 168px; }
+  .gauge .txt { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+  .gauge .n { font-family: var(--font-mono); font-size: 40px; font-weight: 500; letter-spacing: -0.035em; line-height: 1; }
+  .gauge .d { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 5px; }
+
+  .skillgrid { display: grid; gap: 9px; }
+  .skill { display: flex; align-items: center; gap: 9px; font-size: 13px; }
+  .skill .tick { width: 15px; height: 15px; border-radius: var(--r-xs); display: grid; place-items: center; font-size: 10px; flex-shrink: 0; }
+  .skill.have .tick { background: var(--success-soft); color: var(--success); }
+  .skill.miss .tick { background: var(--danger-soft); color: var(--danger); }
+  .skill.miss { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--border-strong); }
+
+  .sug { display: grid; gap: 10px; counter-reset: s; }
+  .sug li { display: grid; grid-template-columns: 22px minmax(0,1fr); gap: 10px; font-size: 13px; line-height: 1.65; color: var(--fg-2); }
+  .sug li::before {
+    counter-increment: s; content: counter(s, decimal-leading-zero);
+    font-family: var(--font-mono); font-size: 10.5px; color: var(--accent-ink);
+    background: var(--accent-soft); border-radius: var(--r-xs);
+    height: 20px; display: grid; place-items: center;
+  }
+  .stackline { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .proj { border: 1px solid var(--border); border-radius: var(--r-sm); padding: 11px 13px; }
+  .proj + .proj { margin-top: 9px; }
+  .proj .nm { font-size: 13px; font-weight: 560; }
+  .proj .ds { font-size: 12.5px; color: var(--fg-2); line-height: 1.62; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div id="rail-slot"></div>
+
+  <main class="main">
+    <div class="page">
+
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Resume · 简历解析与 JD 匹配</div>
+          <div class="title-row" style="margin-top:7px">
+            <h1 class="h1">简历诊断</h1>
+            <span class="pill">PDF → 结构化 → 匹配度</span>
+          </div>
+          <p class="lead" style="margin-top:8px;font-size:14px">
+            上传 PDF 简历并贴上目标岗位 JD。链路上依次跑「解析简历 → 解析 JD → 对比诊断」三个节点，
+            每一步都在右侧执行面板实时点亮。
+          </p>
+        </div>
+      </div>
+
+      <div class="grid g-main-side">
+
+        <!-- ===== 左：输入 + 结果 ===== -->
+        <div class="stack">
+
+          <section class="card" data-od-id="resume-card-01">
+            <div class="card-head">
+              <div class="h3">输入材料</div>
+              <span class="cap">三步串行 · 逐步可见</span>
+            </div>
+            <div class="card-body">
+              <div class="steps">
+
+                <div class="step on" id="s1">
+                  <span class="n">1</span>
+                  <div>
+                    <div class="h3">上传简历 PDF</div>
+                    <p class="hint mt-1">扫描件无法提取文本，会返回 400「无法从 PDF 提取文本」。</p>
+                    <div class="drop mt-3" id="drop">
+                      <div class="drop-ico">⇪</div>
+                      <div style="font-size:13px;font-weight:540">拖入 PDF，或点击选择文件</div>
+                      <div class="hint mt-1">仅解析文本层，单文件建议 &lt; 5 MB</div>
+                      <input type="file" id="file" accept="application/pdf" hidden />
+                    </div>
+                    <div class="filechip" id="chip" style="display:none">
+                      <span class="ic">PDF</span>
+                      <div class="grow">
+                        <div class="nm" id="chip-nm">resume.pdf</div>
+                        <div class="sz" id="chip-sz">— </div>
+                      </div>
+                      <button class="x" id="chip-x" title="移除">✕</button>
+                    </div>
+                    <details class="ref" style="margin-top:12px">
+                      <summary>没有 PDF？直接用演示简历文本</summary>
+                      <div class="bd mono" style="font-size:12px;white-space:pre-wrap" id="demo-text"></div>
+                    </details>
+                  </div>
+                </div>
+
+                <div class="step on" id="s2">
+                  <span class="n">2</span>
+                  <div>
+                    <div class="h3">粘贴目标岗位 JD</div>
+                    <textarea class="textarea mt-2" id="jd" style="min-height:130px"></textarea>
+                    <div class="row-between mt-2">
+                      <span class="hint">JD 会被解析成「职责 / 必备技能 / 加分技能」三段结构。</span>
+                      <span class="cap mono" id="jd-cnt">0 字</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="step on" id="s3">
+                  <span class="n">3</span>
+                  <div>
+                    <div class="h3">开始诊断</div>
+                    <p class="hint mt-1">三个节点串行执行，中途失败会立即中断并推错误事件。</p>
+                    <div class="row mt-3" style="gap:10px">
+                      <button class="btn btn-primary btn-lg" id="btn-run">开始诊断</button>
+                      <button class="btn btn-lg" id="btn-demo">填入演示数据</button>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </section>
+
+          <!-- 结果 -->
+          <section class="card" data-od-id="resume-card-02" id="rcard" style="display:none">
+            <div class="card-head">
+              <div class="h3">诊断结果</div>
+              <span class="pill" id="r-jd">—</span>
+            </div>
+            <div class="card-body">
+              <div class="match">
+                <div class="gauge" id="gauge"></div>
+                <div>
+                  <div class="eyebrow">匹配度评估</div>
+                  <p class="verdict" id="match-note" style="margin-top:8px"></p>
+                  <div class="stackline" id="have-skills"></div>
+                </div>
+              </div>
+
+              <hr class="hair" />
+
+              <div class="grid g-2">
+                <div class="note good"><div class="t"><span class="dot done"></span>亮点</div><ul id="r-good"></ul></div>
+                <div class="note bad"><div class="t"><span class="dot warn"></span>短板</div><ul id="r-bad"></ul></div>
+              </div>
+
+              <div class="grid g-2 mt-4">
+                <div class="card" style="box-shadow:none">
+                  <div class="card-head"><div class="h3">必备技能对照</div></div>
+                  <div class="card-body"><div class="skillgrid" id="req"></div></div>
+                </div>
+                <div class="card" style="box-shadow:none">
+                  <div class="card-head"><div class="h3">加分技能对照</div></div>
+                  <div class="card-body"><div class="skillgrid" id="pref"></div></div>
+                </div>
+              </div>
+
+              <div class="card mt-4" style="box-shadow:none">
+                <div class="card-head"><div class="h3">优化建议</div><span class="pill accent">按优先级排序</span></div>
+                <div class="card-body"><ol class="sug" id="r-sug"></ol></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 结构化简历 -->
+          <section class="card" data-od-id="resume-card-03" id="scard" style="display:none">
+            <div class="card-head"><div class="h3">结构化简历</div><span class="small">解析后的字段</span></div>
+            <div class="card-body">
+              <div class="grid g-2">
+                <div>
+                  <div class="eyebrow">基本信息</div>
+                  <div class="h2 mt-2" id="r-name"></div>
+                  <div class="small mt-1" id="r-edu"></div>
+                  <div class="eyebrow mt-4">技能</div>
+                  <div class="stackline" id="r-skills"></div>
+                </div>
+                <div>
+                  <div class="eyebrow">项目经历</div>
+                  <div class="mt-2" id="r-proj"></div>
+                </div>
+              </div>
+              <div class="eyebrow mt-5">个人总结</div>
+              <p class="lead mt-2" style="font-size:13.5px" id="r-sum"></p>
+              <div class="eyebrow mt-4">工作 / 实习经历</div>
+              <p class="small mt-2" id="r-work"></p>
+            </div>
+          </section>
+
+        </div>
+
+        <!-- ===== 右：可观测 ===== -->
+        <div class="side">
+          <div id="trace-slot"></div>
+
+          <section class="card" data-od-id="resume-card-04">
+            <div class="card-head"><div class="h3">岗位画像</div><span class="pill" id="p-pos">—</span></div>
+            <div class="card-body tight" id="p-body">
+              <div class="empty" style="border:0;background:transparent;padding:26px 16px">
+                <div class="glyph">≡</div><div class="t">尚未解析</div>
+                <div class="d">贴入 JD 后这里会出现岗位职责与技能要求。</div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="assets/app.js"></script>
+<script src="assets/api-real.js"></script>
+<script>
+(async function () {
+  Om.mount("resume");
+  document.getElementById("trace-slot").innerHTML = Om.tracePanel("trace", "等待执行");
+  const trace = Om.bindTrace("trace");
+  const $ = (s) => document.querySelector(s);
+  let running = false;
+  /** 已就绪的简历纯文本：来自 PDF 解析，或来自「填入演示数据」 */
+  let resumeText = "";
+
+  const DEMO_RESUME = `马乾恩 | 计算机科学与技术 | 2023.09 - 2027.06
+技能：Python、FastAPI、LangGraph、PostgreSQL、Redis、Docker、React、Qdrant
+项目经历
+  OfferMind 求职训练平台（2026.03 - 2026.10）
+    可观测 Agentic RAG 驱动的 AI 面试训练系统。独立完成后端 47 个 REST 接口、
+    8 张 LangGraph 编排图与 SSE 流式可观测链路，向量库使用 Qdrant + BGE-M3。
+  课程实验：简易 RPC 框架
+    基于 Netty 实现服务注册发现与负载均衡。
+个人总结
+  后端方向，熟悉 Python 服务端与 LLM 应用工程化，有从 0 到 1 落地完整系统的经验。
+工作/实习经历：暂无`;
+
+  const DEMO_JD = `后端开发实习生（AI 应用方向）
+岗位职责
+  1. 参与 LLM 应用后端服务的设计与开发；
+  2. 负责 RAG 检索链路的效果调优与评测；
+  3. 编写接口文档与单元测试。
+任职要求
+  1. 熟悉 Python，掌握 FastAPI 或同类 Web 框架；
+  2. 熟悉 MySQL / PostgreSQL 与 Redis；
+  3. 了解 Linux 常用命令与基本运维。
+加分项
+  1. 有 LangChain / LangGraph 使用经验；
+  2. 了解向量数据库与检索增强生成；
+  3. 有 Docker / K8s 部署经验；
+  4. 有模型部署或微调经验。`;
+
+  $("#demo-text").textContent = DEMO_RESUME;
+  $("#jd").value = "";
+  $("#jd").dispatchEvent(new Event("input"));
+
+  $("#jd").addEventListener("input", (e) => {
+    $("#jd-cnt").textContent = `${e.target.value.length} 字`;
+    $("#s2").className = "step " + (e.target.value.trim().length > 20 ? "done" : "on");
+  });
+
+  /* ---------- 文件选择 ---------- */
+  const drop = $("#drop"), file = $("#file");
+  drop.addEventListener("click", () => file.click());
+  ["dragenter", "dragover"].forEach((ev) =>
+    drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("over"); })
+  );
+  ["dragleave", "drop"].forEach((ev) =>
+    drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("over"); })
+  );
+  drop.addEventListener("drop", (e) => { if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]); });
+  file.addEventListener("change", () => { if (file.files[0]) setFile(file.files[0]); });
+
+  function setFile(f) {
+    if (!f.name.toLowerCase().endsWith(".pdf")) {
+      Om.toast("err", "格式不支持", "只接受 PDF。扫描件会因无法提取文本返回 400。");
+      return;
+    }
+    // 换了 PDF 就作废之前解析出来的文本，避免拿旧简历配新 JD
+    resumeText = "";
+    $("#chip").style.display = "";
+    $("#chip-nm").textContent = f.name;
+    $("#chip-sz").textContent = `${(f.size / 1024).toFixed(0)} KB · 待解析`;
+    drop.style.display = "none";
+    $("#s1").className = "step done";
+  }
+  $("#chip-x").addEventListener("click", () => {
+    $("#chip").style.display = "none";
+    drop.style.display = "";
+    file.value = "";
+    resumeText = "";
+    $("#s1").className = "step on";
+  });
+
+  $("#btn-demo").addEventListener("click", () => {
+    // 演示路径直接用纯文本，跳过 PDF —— 后端的 /resume/diagnose/stream 本来就吃文本
+    resumeText = DEMO_RESUME;
+    $("#chip").style.display = "";
+    $("#chip-nm").textContent = "演示简历（纯文本）";
+    $("#chip-sz").textContent = `${DEMO_RESUME.length} 字 · 无需上传`;
+    drop.style.display = "none";
+    $("#jd").value = DEMO_JD;
+    $("#jd").dispatchEvent(new Event("input"));
+    $("#s1").className = "step done";
+    Om.toast("info", "已填入演示数据", "简历与 JD 都已就绪，点「开始诊断」");
+  });
+
+  /* ---------- 诊断 ---------- */
+  $("#btn-run").addEventListener("click", async () => {
+    if (running) return;
+    const hasPdf = file.files[0];
+    if (!hasPdf && !resumeText) {
+      return Om.toast("err", "缺少简历", "先上传一份 PDF，或点「填入演示数据」。");
+    }
+    if ($("#jd").value.trim().length < 20) {
+      return Om.toast("err", "JD 太短", "至少粘贴 20 个字的岗位描述，否则解析不出技能要求。");
+    }
+
+    running = true;
+    $("#btn-run").disabled = true;
+    trace.reset();
+    trace.live("running");
+    $("#s3").className = "step on";
+
+    try {
+      let structured = null;
+
+      // 第一步：如果是 PDF，先解析拿结构化简历 + 原文
+      if (hasPdf) {
+        trace.setTitle("resume/parse/stream");
+        const fd = new FormData();
+        fd.append("file", hasPdf);
+        const parsed = await Om.sseAsync("/api/v1/resume/parse/stream", {
+          body: fd,
+          onEvent: (ev) => { if (ev.id) trace.push(ev); },
+        });
+        if (parsed) {
+          structured = parsed;
+          resumeText = parsed.resume_text || resumeText;
+        }
+      }
+
+      // 第二步：简历文本 + JD → 结构化简历 / 岗位画像 / 诊断报告
+      trace.setTitle("resume/diagnose/stream");
+      const out = await Om.sseAsync("/api/v1/resume/diagnose/stream", {
+        body: { resume_text: resumeText, jd_text: $("#jd").value },
+        onEvent: (ev) => { if (ev.id) trace.push(ev); },
+      });
+      if (!out) throw new Error("没有收到诊断结果");
+
+      const resume = out.structured_resume || structured;
+      const jd = out.jd_profile;
+      const diag = out.diagnosis;
+      render(resume, jd, diag);
+
+      $("#s3").className = "step done";
+      // 记一条历史，侧栏可点开恢复这次诊断
+      Om.api("POST", "/api/v1/history", {
+        module: "resume",
+        title: `简历诊断｜${jd.position || "岗位"}`,
+        snapshot: { resumeText, jdText: $("#jd").value, structured: resume, jdProfile: jd, diagnosis: diag },
+      }).catch(() => {});
+      Om.toast("ok", "诊断完成", `匹配度 ${diag.match_score} / 100，已写入历史`);
+    } catch (ex) {
+      Om.toast("err", "诊断失败", ex.message || String(ex));
+    } finally {
+      running = false;
+      $("#btn-run").disabled = false;
+      trace.live("done");
+    }
+  });
+
+  function render(resume, jd, diag) {
+    $("#rcard").style.display = "";
+    $("#scard").style.display = "";
+    $("#r-jd").textContent = jd.position;
+
+    /* 匹配度环 */
+    const p = diag.match_score;
+    const tone = p >= 80 ? "var(--success)" : p >= 65 ? "var(--accent-ink)" : p >= 50 ? "var(--warn)" : "var(--danger)";
+    $("#gauge").innerHTML = `
+      <svg viewBox="0 0 168 168" width="168" height="168">
+        <circle cx="84" cy="84" r="70" fill="none" stroke="var(--surface-3)" stroke-width="12"/>
+        <circle cx="84" cy="84" r="70" fill="none" stroke="${tone}" stroke-width="12" stroke-linecap="round"
+          stroke-dasharray="${((p / 100) * 440).toFixed(1)} 440" transform="rotate(-90 84 84)"/>
+      </svg>
+      <div class="txt"><div class="n" style="color:${tone}">${p}</div><div class="d">/ 100</div></div>`;
+
+    const have = jd.required_skills.filter((s) => resume.skills.some((k) => k.toLowerCase().includes(s.toLowerCase()) || s.toLowerCase().includes(k.toLowerCase())));
+    $("#have-skills").innerHTML = have.map((s) => `<span class="pill success">✓ ${s}</span>`).join("");
+    $("#match-note").innerHTML = `共 ${jd.required_skills.length} 项必备技能，命中 <b>${have.length}</b> 项；
+      缺口集中在 <b>${diag.missing_skills[0] || "—"}</b>。${p >= 65 ? "基础匹配，补上短板即可投递。" : "建议先补齐必备技能再投。"}`;
+
+    $("#r-good").innerHTML = diag.strengths.map((x) => `<li>${x}</li>`).join("");
+    $("#r-bad").innerHTML = diag.weaknesses.map((x) => `<li>${x}</li>`).join("");
+
+    const skillRow = (list) =>
+      list
+        .map((s) => {
+          const ok = resume.skills.some((k) => k.toLowerCase().includes(s.toLowerCase()) || s.toLowerCase().includes(k.toLowerCase()));
+          return `<div class="skill ${ok ? "have" : "miss"}"><span class="tick">${ok ? "✓" : "✕"}</span><span>${s}</span>
+            ${ok ? "" : '<span class="pill danger" style="margin-left:auto">缺失</span>'}</div>`;
+        })
+        .join("");
+    $("#req").innerHTML = skillRow(jd.required_skills);
+    $("#pref").innerHTML = skillRow(jd.preferred_skills);
+
+    $("#r-sug").innerHTML = diag.suggestions.map((x) => `<li><span>${x}</span></li>`).join("");
+
+    /* 结构化简历 */
+    $("#r-name").textContent = resume.name;
+    $("#r-edu").textContent = resume.education;
+    $("#r-skills").innerHTML = resume.skills.map((s) => `<span class="pill">${s}</span>`).join("");
+    $("#r-proj").innerHTML = resume.projects
+      .map((p2) => `<div class="proj"><div class="nm">${p2.name}</div><div class="ds">${p2.description}</div>
+        <div class="stackline">${String(p2.tech_stack || "").split(/[\/、,，]/).map((t) => t.trim()).filter(Boolean).map((t) => `<span class="pill accent">${t}</span>`).join("")}</div></div>`)
+      .join("");
+    $("#r-sum").textContent = resume.summary;
+    $("#r-work").textContent = resume.work_experience;
+
+    /* 岗位画像 */
+    $("#p-pos").textContent = jd.position;
+    $("#p-body").innerHTML = `
+      <div style="padding:14px 16px">
+        <div class="eyebrow">岗位职责</div>
+        <ul class="stack-sm mt-2" style="font-size:12.5px">${jd.responsibilities.map((x) => `<li>— ${x}</li>`).join("")}</ul>
+        <div class="eyebrow mt-4">必备技能</div>
+        <div class="stackline">${jd.required_skills.map((s) => `<span class="pill info">${s}</span>`).join("")}</div>
+        <div class="eyebrow mt-4">加分技能</div>
+        <div class="stackline">${jd.preferred_skills.map((s) => `<span class="pill">${s}</span>`).join("")}</div>
+        <div class="eyebrow mt-4">缺失技能</div>
+        <div class="stackline">${diag.missing_skills.map((s) => `<span class="pill danger">${s}</span>`).join("")}</div>
+      </div>`;
+  }
+})().catch((e) => Om.toast("err", "页面初始化失败", e.message || String(e)));
+</script>
+</body>
+</html>

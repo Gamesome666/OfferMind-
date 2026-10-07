@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>刷题训练 · OfferMind</title>
+<link rel="stylesheet" href="assets/tokens.css" />
+<style>
+  .cfgbar {
+    display: grid; grid-template-columns: repeat(3, minmax(0,1fr)) minmax(0,1.4fr) auto;
+    gap: 14px; align-items: end;
+  }
+  @media (max-width: 1180px) { .cfgbar { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  @media (max-width: 700px) { .cfgbar { grid-template-columns: minmax(0,1fr); } }
+
+  .side { position: sticky; top: 20px; display: grid; gap: 16px; }
+
+  /* 题干 */
+  .qhead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .qtext { font-size: 15.5px; line-height: 1.72; letter-spacing: -0.004em; }
+  .samples {
+    margin-top: 14px; background: var(--ink-bg); color: var(--ink-fg);
+    border-radius: var(--r-sm); padding: 12px 14px;
+    font-family: var(--font-mono); font-size: 12px; line-height: 1.7;
+    white-space: pre-wrap; overflow-x: auto;
+  }
+  .samples .lb {
+    display: block; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-muted); margin-bottom: 6px;
+  }
+  .kps { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+
+  /* 作答区 */
+  .answer-area { position: relative; }
+  .answer-area textarea { min-height: 190px; font-size: 13.5px; }
+  .count { position: absolute; right: 10px; bottom: 9px; font-family: var(--font-mono); font-size: 11px; color: var(--faint); pointer-events: none; }
+
+  /* 评分结果 */
+  .scorehead { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 22px; align-items: center; }
+  .bigscore {
+    display: grid; place-items: center; width: 118px; height: 118px; border-radius: 50%;
+    background: conic-gradient(var(--accent-ink) calc(var(--p) * 1%), var(--surface-3) 0);
+    position: relative; flex-shrink: 0;
+  }
+  .bigscore::after {
+    content: ""; position: absolute; inset: 8px; border-radius: 50%; background: var(--surface);
+  }
+  .bigscore .in { position: relative; text-align: center; line-height: 1; }
+  .bigscore .n { font-family: var(--font-mono); font-size: 32px; font-weight: 500; letter-spacing: -0.03em; }
+  .bigscore .d { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .verdict { font-size: 13.5px; line-height: 1.7; color: var(--fg-2); }
+  .verdict b { color: var(--fg); font-weight: 560; }
+
+  .two { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }
+  @media (max-width: 860px) { .two { grid-template-columns: minmax(0,1fr); } }
+  .note { border: 1px solid var(--border); border-radius: var(--r-sm); padding: 12px 14px; }
+  .note .t { font-size: 12px; font-weight: 600; margin-bottom: 7px; display: flex; align-items: center; gap: 7px; }
+  .note ul { display: grid; gap: 6px; }
+  .note li { font-size: 12.5px; line-height: 1.6; color: var(--fg-2); padding-left: 15px; position: relative; }
+  .note li::before { content: "—"; position: absolute; left: 0; color: var(--faint); }
+  .note.good { border-left: 2px solid var(--success); }
+  .note.bad { border-left: 2px solid var(--warn); }
+
+  details.ref { margin-top: 14px; border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden; }
+  details.ref summary {
+    padding: 10px 14px; font-size: 12.5px; font-weight: 540; cursor: pointer; background: var(--surface-2);
+    list-style: none; display: flex; align-items: center; justify-content: space-between;
+  }
+  details.ref summary::-webkit-details-marker { display: none; }
+  details.ref summary::after { content: "▾"; color: var(--muted); font-size: 11px; transition: transform .16s; }
+  details.ref[open] summary::after { transform: rotate(180deg); }
+  details.ref .bd { padding: 13px 14px; font-size: 13px; line-height: 1.72; color: var(--fg-2); border-top: 1px solid var(--border); }
+
+  .stage { display: flex; align-items: center; gap: 0; margin-bottom: 20px; }
+  .stage .st { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+  .stage .st .n {
+    width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center;
+    font-family: var(--font-mono); font-size: 10.5px; border: 1px solid var(--border-strong); background: var(--surface);
+  }
+  .stage .ln { flex: 1; height: 1px; background: var(--border); margin: 0 10px; min-width: 14px; }
+  .stage .st.on { color: var(--fg); }
+  .stage .st.on .n { border-color: var(--brand); background: var(--brand); color: #fff; }
+  .stage .st.done .n { border-color: var(--success); color: var(--success); }
+
+  /* 追问链 */
+  .fu { border-top: 1px solid var(--border); padding: 13px 16px; }
+  .fu:first-child { border-top: 0; }
+  .fu .qh { font-size: 13.5px; font-weight: 540; line-height: 1.6; }
+  .fu .kp { font-size: 12px; color: var(--muted); margin-top: 5px; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div id="rail-slot"></div>
+
+  <main class="main">
+    <div class="page">
+
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Practice · AI 定向刷题评测</div>
+          <div class="title-row" style="margin-top:7px">
+            <h1 class="h1">刷题训练</h1>
+            <span class="pill" id="model-pill">deepseek-v4-flash</span>
+            <span class="pill"><span class="dot done"></span>SSE 已连接</span>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn" id="btn-reset">重置本轮</button>
+          <button class="btn btn-primary" id="btn-gen">生成题目</button>
+        </div>
+      </div>
+
+      <!-- ===== 阶段指示 ===== -->
+      <div class="stage">
+        <div class="st on" id="st1"><span class="n">1</span>配置出题</div><span class="ln"></span>
+        <div class="st" id="st2"><span class="n">2</span>作答</div><span class="ln"></span>
+        <div class="st" id="st3"><span class="n">3</span>四维评分</div><span class="ln"></span>
+        <div class="st" id="st4"><span class="n">4</span>追问与报告</div>
+      </div>
+
+      <div class="grid g-main-side">
+
+        <!-- ================= 左：内容流 ================= -->
+        <div class="stack">
+
+          <!-- 出题配置 -->
+          <section class="card" data-od-id="practice-card-01">
+            <div class="card-head">
+              <div class="h3">出题参数</div>
+              <span class="pill"><span class="dot done"></span>流式执行</span>
+            </div>
+            <div class="card-body">
+              <div class="cfgbar">
+                <div class="field">
+                  <label class="label" for="dir">技术方向</label>
+                  <select class="select" id="dir">
+                    <option>后端</option><option>前端</option><option>算法</option>
+                    <option>数据库</option><option>操作系统</option><option>计算机网络</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label class="label" for="diff">难度</label>
+                  <select class="select" id="diff"><option>初级</option><option selected>中级</option><option>高级</option></select>
+                </div>
+                <div class="field">
+                  <label class="label" for="type">题型</label>
+                  <select class="select" id="type"><option>八股</option><option>算法</option><option>业务</option></select>
+                </div>
+                <div class="field">
+                  <label class="label" for="weak">薄弱点补充 <span class="cap">可选</span></label>
+                  <input class="input" id="weak" placeholder="如：索引下推、缓存雪崩" />
+                </div>
+                <button class="btn btn-primary" id="btn-gen2">出题</button>
+              </div>
+              <p class="hint mt-3">
+                生成后题目会同时写入题库：PostgreSQL 存主记录，Qdrant 存可检索片段；
+                查重相似度超过 <code class="mono">0.92</code> 会自动重新生成，最多 3 次。
+              </p>
+            </div>
+          </section>
+
+          <!-- 题目 -->
+          <section class="card" data-od-id="practice-card-02" id="qcard" style="display:none">
+            <div class="card-head">
+              <div class="h3">题目</div>
+              <div class="row">
+                <span class="pill accent mono" id="qid">question_id —</span>
+                <span class="pill" id="qtag">—</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="qhead">
+                <span class="pill info" id="q-dup">查重通过</span>
+                <span class="pill" id="q-attempt">第 1 次生成</span>
+              </div>
+              <p class="qtext" id="qtext"></p>
+              <div class="samples" id="qsamples" style="display:none"><span class="lb">样例与约束</span><span id="qsamples-t"></span></div>
+              <div class="kps" id="qkps"></div>
+            </div>
+          </section>
+
+          <!-- 作答 -->
+          <section class="card" data-od-id="practice-card-03" id="acard" style="display:none">
+            <div class="card-head">
+              <div class="h3">你的作答</div>
+              <span class="cap">四维 rubric 逐维给理由</span>
+            </div>
+            <div class="card-body">
+              <div class="answer-area">
+                <textarea class="textarea" id="answer" placeholder="按「结论 → 展开 → 边界 → 复杂度」的结构作答，评分器会逐维给理由。"></textarea>
+                <span class="count" id="cnt">0 字</span>
+              </div>
+              <div class="row-between mt-3">
+                <span class="hint">评分结果会落进 <code>answers</code> 表 —— 它同时是错题本与 LoRA 微调数据集的来源。</span>
+                <button class="btn btn-accent" id="btn-grade" disabled>提交评分</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- 评分结果 -->
+          <section class="card" data-od-id="practice-card-04" id="rcard" style="display:none">
+            <div class="card-head">
+              <div class="h3">四维评分</div>
+              <span class="pill success" id="rec-pill" style="display:none">已记录 · answer_id —</span>
+            </div>
+            <div class="card-body">
+              <div class="scorehead">
+                <div class="bigscore" id="bigscore" style="--p:0">
+                  <div class="in"><div class="n" id="total">0.0</div><div class="d">/ 5.00</div></div>
+                </div>
+                <div>
+                  <div class="verdict" id="verdict"></div>
+                  <div class="kps" style="border:0;padding-top:10px;margin-top:10px">
+                    <span class="pill">正确性 .40</span><span class="pill">完整性 .30</span>
+                    <span class="pill">表达 .15</span><span class="pill">术语 .15</span>
+                  </div>
+                </div>
+              </div>
+
+              <hr class="hair" />
+              <div id="rubric"></div>
+
+              <div class="two mt-4">
+                <div class="note good"><div class="t"><span class="dot done"></span>优点</div><ul id="strengths"></ul></div>
+                <div class="note bad"><div class="t"><span class="dot warn"></span>改进建议</div><ul id="suggestions"></ul></div>
+              </div>
+
+              <details class="ref">
+                <summary>参考答案</summary>
+                <div class="bd" id="refa"></div>
+              </details>
+
+              <div class="row mt-4" style="gap:10px;flex-wrap:wrap">
+                <button class="btn btn-accent" id="btn-fu">生成追问</button>
+                <a class="btn" href="report.html">生成训练报告</a>
+                <a class="btn btn-ghost" href="wrongbook.html">加入错题本复习 →</a>
+              </div>
+            </div>
+          </section>
+
+          <!-- 追问 -->
+          <section class="card" data-od-id="practice-card-05" id="fcard" style="display:none">
+            <div class="card-head">
+              <div class="h3">追问链</div>
+              <span class="cap">基于本次作答与四维评分追问</span>
+            </div>
+            <div class="card-body tight" id="fu-list"></div>
+          </section>
+        </div>
+
+        <!-- ================= 右：可观测 ================= -->
+        <div class="side">
+          <div id="trace-slot"></div>
+
+          <section class="card" data-od-id="practice-card-06">
+            <div class="card-head"><div class="h3">本轮上下文</div></div>
+            <div class="card-body">
+              <dl class="stack-sm" style="font-size:12.5px" id="ctx"></dl>
+            </div>
+          </section>
+
+          <section class="card" data-od-id="practice-card-07">
+            <div class="card-head"><div class="h3">落库去向</div></div>
+            <div class="card-body">
+              <div class="stack-sm" style="font-size:12.5px">
+                <div class="row-between"><span class="dim">answers 表</span><span class="mono" id="db-a">—</span></div>
+                <div class="row-between"><span class="dim">错题本 SM-2</span><span class="mono" id="db-s">—</span></div>
+                <div class="row-between"><span class="dim">历史快照</span><span class="mono" id="db-h">—</span></div>
+                <div class="row-between"><span class="dim">微调样本</span><span class="mono" id="db-f">—</span></div>
+              </div>
+              <p class="hint mt-3">同一份评分数据支撑三条下游链路，这是系统的数据飞轮。</p>
+            </div>
+          </section>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="assets/app.js"></script>
+<script src="assets/api-real.js"></script>
+<script>
+(async function () {
+  Om.mount("practice");
+  document.getElementById("trace-slot").innerHTML = Om.tracePanel("trace", "等待执行");
+  const trace = Om.bindTrace("trace");
+
+  const $ = (s) => document.querySelector(s);
+  const state = { question: null, questionId: null, score: null, answer: "", followups: [] };
+  let running = false;
+
+  /** 只把带 id 的步骤事件推进轨迹面板 —— 面板按 id 做行键，
+   *  「结果」「已记录」这类没有 id 的事件混进去会共用同一行。 */
+  function pushTrace(ev) {
+    if (ev && ev.id) trace.push(ev);
+  }
+
+  /* ---------- 阶段指示 ---------- */
+  function stage(n) {
+    for (let i = 1; i <= 4; i++) {
+      const el = document.getElementById("st" + i);
+      el.className = "st" + (i < n ? " done" : i === n ? " on" : "");
+      el.querySelector(".n").textContent = i < n ? "✓" : i;
+    }
+  }
+
+  /* ---------- 上下文面板：读真实运行时配置 ---------- */
+  let runtimeCfg = null;
+  async function ctx() {
+    if (runtimeCfg === null) {
+      try {
+        // 与后端 agent 节点同源：管理员在后台改完，这里下一次请求就是新值
+        runtimeCfg = await Om.api("GET", "/api/v1/admin/config");
+      } catch {
+        runtimeCfg = []; // 非管理员会 403，降级成空表，不挡主流程
+      }
+    }
+    const g = (k) => (runtimeCfg.find((x) => x.key === k) || {}).value ?? "—";
+    $("#ctx").innerHTML = `
+      <div class="row-between"><dt class="dim">方向 / 难度 / 题型</dt><dd class="mono">${$("#dir").value} / ${$("#diff").value} / ${$("#type").value}</dd></div>
+      <div class="row-between"><dt class="dim">主生成模型</dt><dd class="mono">${g("llm_model")}</dd></div>
+      <div class="row-between"><dt class="dim">温度</dt><dd class="mono">${g("llm_temperature")}</dd></div>
+      <div class="row-between"><dt class="dim">检索模式</dt><dd class="mono">${g("retrieval_mode")}</dd></div>
+      <div class="row-between"><dt class="dim">召回条数 top_k</dt><dd class="mono">${g("retrieval_top_k")}</dd></div>
+      <div class="row-between"><dt class="dim">精排</dt><dd class="mono">${g("retrieval_use_rerank") === "1" ? "on" : "off"}</dd></div>
+      <div class="row-between"><dt class="dim">网关路由</dt><dd class="mono">${g("llm_gateway_primary") || "直连"}</dd></div>`;
+  }
+  await ctx();
+  ["dir", "diff", "type"].forEach((k) => document.getElementById(k).addEventListener("change", ctx));
+
+  function lock(on) {
+    running = on;
+    ["btn-gen", "btn-gen2", "btn-grade", "btn-fu"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = on;
+    });
+  }
+
+  /* ================= 1. 出题 ================= */
+  function generate() {
+    if (running) return;
+    lock(true);
+    stage(1);
+    trace.reset();
+    trace.setTitle("training/question/stream");
+    trace.live("running");
+
+    const dir = $("#dir").value, diff = $("#diff").value, type = $("#type").value;
+    let output = null;
+    let attempts = 0;
+    let lastDedup = null;
+    let dupHit = false;
+
+    Om.sse("/api/v1/training/question/stream", {
+      body: { direction: dir, difficulty: diff, question_type: type, weak_points: "" },
+      onEvent: (ev) => {
+        pushTrace(ev);
+        if (ev.type === "结果") { output = ev.payload; return; }
+        if (!ev.id) return;
+        // 出题会被查重打回重生成，generate:N / dedup:N 的 N 就是第几次尝试
+        if (ev.id.startsWith("generate:")) attempts = Number(ev.id.split(":")[1]) || attempts;
+        if (ev.id.startsWith("dedup:") && ev.status === "done") {
+          lastDedup = ev.payload;
+          if (String(ev.payload && ev.payload["判定"] || "").includes("重复")) dupHit = true;
+        }
+      },
+      onDone: () => {
+        lock(false);
+        if (!output) return Om.toast("err", "出题失败", "没有收到结果");
+        stage(2);
+        state.question = output;
+        state.questionId = output.question_id;
+
+        $("#qcard").style.display = "";
+        $("#acard").style.display = "";
+        $("#qid").textContent = `question_id ${state.questionId}`;
+        $("#qtag").textContent = `${dir} · ${diff} · ${type}`;
+        $("#qtext").textContent = output.content;
+        if (output.samples) {
+          $("#qsamples").style.display = "";
+          $("#qsamples-t").textContent = output.samples;
+        }
+        $("#qkps").innerHTML = (output.key_points || "")
+          .split(/[\/、，,；;\n]/)
+          .map((k) => k.trim())
+          .filter(Boolean)
+          .map((k) => `<span class="pill info">${k}</span>`)
+          .join("");
+        $("#q-dup").textContent = dupHit
+          ? `查重命中 · 已重新生成（最高相似度 ${lastDedup ? lastDedup["最高相似度"] : "—"}）`
+          : "查重通过";
+        $("#q-dup").className = "pill " + (dupHit ? "warn" : "success");
+        $("#q-attempt").textContent = `第 ${attempts || 1} 次生成`;
+        Om.toast("ok", "出题完成", `已写入题库 question_id = ${state.questionId}`);
+      },
+      onError: (ev) => {
+        lock(false);
+        Om.toast("err", "出题失败", (ev.payload && ev.payload.message) || "未知错误");
+      },
+    });
+  }
+  $("#btn-gen").addEventListener("click", generate);
+  $("#btn-gen2").addEventListener("click", generate);
+
+  /* ================= 2. 作答 ================= */
+  $("#answer").addEventListener("input", (e) => {
+    state.answer = e.target.value;
+    $("#cnt").textContent = `${e.target.value.length} 字`;
+    $("#btn-grade").disabled = running || e.target.value.trim().length < 10;
+  });
+
+  function questionText() {
+    const q = state.question;
+    if (!q) return "";
+    return q.samples ? `${q.content}\n\n${q.samples}` : q.content;
+  }
+
+  /* ================= 3. 评分 ================= */
+  $("#btn-grade").addEventListener("click", () => {
+    if (running || !state.questionId) return;
+    lock(true);
+    stage(3);
+    trace.setTitle("training/grade/stream");
+    trace.live("running");
+
+    let score = null;
+    Om.sse("/api/v1/training/grade/stream", {
+      // question_id 必须回传：后端据此把作答挂到题上，错题本与微调数据集都靠它关联
+      body: { question: questionText(), answer: state.answer, question_id: state.questionId },
+      onEvent: (ev) => {
+        pushTrace(ev);
+        if (ev.type === "结果") { score = ev.payload; return; }
+        if (ev.type === "已记录") {
+          const p = ev.payload || {};
+          $("#rec-pill").style.display = "";
+          $("#rec-pill").innerHTML = `<span class="dot ${p.is_wrong ? "warn" : "done"}"></span>已记录 · answer_id ${p.answer_id}`;
+          $("#db-a").textContent = `#${p.answer_id}`;
+          $("#db-s").textContent = p.is_wrong ? `已入队 · ${1} 天后` : "未入队";
+          $("#db-h").textContent = "已写入";
+          $("#db-f").textContent = "待导出（alpaca）";
+          // 记一条历史，侧栏可点开恢复这次的题目 / 作答 / 评分
+          Om.api("POST", "/api/v1/history", {
+            module: "practice",
+            title: `${$("#dir").value}·${$("#diff").value}｜${questionText().slice(0, 28)}`,
+            snapshot: {
+              question: state.question,
+              answer: state.answer,
+              score: score,
+              direction: $("#dir").value,
+              difficulty: $("#diff").value,
+              type: $("#type").value,
+            },
+          }).catch(() => {});
+        }
+      },
+      onDone: () => {
+        lock(false);
+        if (!score) return Om.toast("err", "评分失败", "没有收到结果");
+        stage(4);
+        state.score = score;
+        renderScore(score);
+        Om.toast("ok", "评分完成", `加权总分 ${score.total_score} / 5.00，已落库`);
+      },
+      onError: (ev) => {
+        lock(false);
+        Om.toast("err", "评分失败", (ev.payload && ev.payload.message) || "未知错误");
+      },
+    });
+  });
+
+  function renderScore(s) {
+    const card = $("#rcard");
+    card.style.display = "";
+    $("#total").textContent = s.total_score.toFixed(2);
+    $("#bigscore").style.setProperty("--p", Math.round((s.total_score / 5) * 100));
+    $("#verdict").innerHTML = `<b>${verdictOf(s.total_score)}</b> —— ${s.correctness.reason}`;
+    $("#rubric").innerHTML = Om.rubric(s);
+    $("#strengths").innerHTML = splitList(s.strengths).map((x) => `<li>${x}</li>`).join("");
+    $("#suggestions").innerHTML = splitList(s.suggestions).map((x) => `<li>${x}</li>`).join("");
+    $("#refa").textContent = s.reference_answer;
+    $("#btn-fu").disabled = false;
+  }
+
+  function verdictOf(v) {
+    if (v >= 4.5) return "答得很完整，可以直接进下一题。";
+    if (v >= 3.5) return "核心思路对，细节有缺口。";
+    if (v >= 2.5) return "方向对但讲不透，属于典型的「会做不会说」。";
+    return "本题存在概念性缺口，建议先复习再重做。";
+  }
+  function splitList(t) {
+    return String(t || "").split(/[；;。\n]/).map((x) => x.trim()).filter((x) => x.length > 1);
+  }
+
+  /* ================= 4. 追问 ================= */
+  $("#btn-fu").addEventListener("click", () => {
+    if (running || !state.score) return;
+    lock(true);
+    trace.setTitle("training/followup/stream");
+    trace.live("running");
+
+    const s = state.score;
+    const summary = ["correctness", "completeness", "clarity", "terminology"]
+      .map((k) => `${k} ${s[k].score}/5`)
+      .join("，") + `，总分 ${s.total_score}`;
+
+    let out = null;
+    Om.sse("/api/v1/training/followup/stream", {
+      body: { question: questionText(), answer: state.answer, score_summary: summary },
+      onEvent: (ev) => {
+        pushTrace(ev);
+        if (ev.type === "结果") out = ev.payload;
+      },
+      onDone: () => {
+        lock(false);
+        if (!out) return Om.toast("err", "追问失败", "没有收到结果");
+        state.followups.push(out);
+        $("#fcard").style.display = "";
+        $("#btn-fu").disabled = false;
+        const li = document.createElement("div");
+        li.className = "fu";
+        li.innerHTML = `<div class="row" style="margin-bottom:7px">
+            <span class="pill accent">追问 ${state.followups.length}</span>
+            <span class="pill">考察点：${out.key_points}</span>
+          </div>
+          <div class="qh">${out.question}</div>
+          <details class="ref" style="margin-top:9px"><summary>参考答案</summary><div class="bd">${out.reference_answer}</div></details>`;
+        $("#fu-list").appendChild(li);
+        Om.toast("info", "追问已生成", "继续作答可形成追问链，一并进入训练报告");
+      },
+      onError: (ev) => {
+        lock(false);
+        Om.toast("err", "追问失败", (ev.payload && ev.payload.message) || "未知错误");
+      },
+    });
+  });
+
+  /* ================= 重置 ================= */
+  $("#btn-reset").addEventListener("click", () => {
+    if (running) return;
+    state.question = null; state.questionId = null; state.score = null; state.followups = [];
+    $("#answer").value = ""; $("#cnt").textContent = "0 字";
+    ["qcard", "acard", "rcard", "fcard"].forEach((id) => (document.getElementById(id).style.display = "none"));
+    $("#qsamples").style.display = "none";
+    $("#rec-pill").style.display = "none";
+    $("#fu-list").innerHTML = "";
+    $("#db-a").textContent = $("#db-s").textContent = $("#db-h").textContent = $("#db-f").textContent = "—";
+    trace.reset(); trace.setTitle("等待执行"); trace.live("done");
+    stage(1);
+    Om.toast("info", "已重置", "页面状态清空，可重新出题");
+  });
+})().catch((e) => Om.toast("err", "页面初始化失败", e.message || String(e)));
+</script>
+</body>
+</html>

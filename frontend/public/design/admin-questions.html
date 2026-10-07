@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>题库管理 · OfferMind</title>
+<link rel="stylesheet" href="assets/tokens.css" />
+<style>
+  .toolbar { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .search { position: relative; }
+  .search .input { width: 240px; padding-left: 30px; }
+  .search::before { content: "⌕"; position: absolute; left: 10px; top: 7px; color: var(--faint); font-size: 14px; }
+  .content-cell { max-width: 460px; font-size: 13px; line-height: 1.55; }
+  .pager { display: flex; align-items: center; gap: 10px; }
+  .pager .p { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+
+  .sync { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 10.5px; }
+  .sync .dot { width: 6px; height: 6px; }
+
+  .qprev {
+    border: 1px solid var(--border); border-radius: var(--r-sm); padding: 12px 14px;
+    background: var(--surface-2); font-size: 13px; line-height: 1.65;
+  }
+  .qprev + .qprev { margin-top: 10px; }
+  .qprev .lb { font-family: var(--font-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+
+  .warnbox {
+    display: flex; gap: 10px; padding: 11px 13px; border-radius: var(--r-sm);
+    background: var(--warn-soft); border: 1px solid oklch(68% 0.15 72 / 0.32);
+    font-size: 12.5px; line-height: 1.6; color: oklch(42% 0.11 72);
+  }
+  .syncbar {
+    display: grid; gap: 9px; padding: 13px 14px; border: 1px solid var(--border);
+    border-radius: var(--r-sm); background: var(--surface-2);
+  }
+  .syncbar .line { display: grid; grid-template-columns: 92px 14px minmax(0,1fr); gap: 10px; align-items: center; font-family: var(--font-mono); font-size: 11.5px; }
+  .syncbar .line .k { color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div id="rail-slot"></div>
+
+  <main class="main">
+    <div class="page">
+
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Admin · 题库管理</div>
+          <div class="title-row" style="margin-top:7px">
+            <h1 class="h1">题库管理</h1>
+            <span class="pill" id="total-pill">—</span>
+          </div>
+          <p class="lead" style="margin-top:8px;font-size:14px">
+            题目是跨用户复用的公共资源。每次增删改都会同步向量库 ——
+            <b>只改 PostgreSQL 不同步 Qdrant，检索会继续命中已删的旧题</b>。
+          </p>
+        </div>
+        <div class="actions">
+          <a class="btn" href="admin.html">返回概览</a>
+          <button class="btn btn-primary" id="btn-new">新建题目</button>
+        </div>
+      </div>
+
+      <section class="card" data-od-id="admin-questions-card-01" style="overflow:hidden">
+        <div class="toolbar">
+          <div class="search"><input class="input" id="kw" placeholder="按题干关键词搜索" /></div>
+          <select class="select" id="dir" style="width:150px">
+            <option value="">全部方向</option>
+            <option>后端</option><option>前端</option><option>算法</option>
+            <option>数据库</option><option>操作系统</option><option>计算机网络</option>
+          </select>
+          <select class="select" id="size" style="width:110px">
+            <option value="5">每页 5 条</option>
+            <option value="10" selected>每页 10 条</option>
+            <option value="20">每页 20 条</option>
+          </select>
+          <span class="spacer" style="margin-left:auto"></span>
+          <span class="small" id="ep">按关键词与方向筛选</span>
+        </div>
+
+        <div class="table-wrap" style="max-height:none">
+          <table class="table">
+            <thead>
+              <tr>
+                <th style="width:52px">ID</th>
+                <th style="width:196px">分类</th>
+                <th>题干</th>
+                <th style="width:132px">检索状态</th>
+                <th style="width:150px;text-align:right">操作</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+
+        <div class="card-foot">
+          <div class="pager">
+            <button class="btn btn-sm" id="prev">‹ 上一页</button>
+            <span class="p" id="pageinfo">—</span>
+            <button class="btn btn-sm" id="next">下一页 ›</button>
+          </div>
+          <span class="small">改题会同步更新向量库，否则检索仍会命中旧题</span>
+        </div>
+      </section>
+
+      <section class="card mt-5" data-od-id="admin-questions-card-02">
+        <div class="card-head"><div class="h3">同步语义</div><span class="pill accent">PG + Qdrant 双写</span></div>
+        <div class="card-body">
+          <div class="grid g-3">
+            <div class="qprev"><div class="lb">新建</div>题目落库后立即向量化入库，新题马上能被检索到</div>
+            <div class="qprev"><div class="lb">编辑</div>覆盖同一条向量记录，不会留下孤儿数据导致检索命中旧题</div>
+            <div class="qprev"><div class="lb">删除</div>题库与向量库同步删除。只删一边会让检索继续命中已删的题</div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="assets/app.js"></script>
+<script src="assets/api-real.js"></script>
+<script>
+(async function () {
+  Om.mount("admin-questions");
+  const $ = (s) => document.querySelector(s);
+  const page = { n: 1, kw: "", dir: "", size: 10 };
+  /** 当前页的题目，供查看/编辑/删除时取原始数据 */
+  let rows = [];
+
+  async function load() {
+    const qs = `?keyword=${encodeURIComponent(page.kw)}&direction=${encodeURIComponent(page.dir)}&page=${page.n}&size=${page.size}`;
+    try {
+      const r = await Om.api("GET", `/api/v1/admin/questions${qs}`);
+      rows = r.items || [];
+      $("#ep").textContent = page.kw || page.dir ? "已应用筛选" : "按关键词与方向筛选";
+      $("#total-pill").textContent = `共 ${r.total} 题`;
+      const pages = Math.max(1, Math.ceil(r.total / r.size));
+      $("#pageinfo").textContent = `第 ${r.page} / ${pages} 页 · 本页 ${rows.length} 条`;
+      $("#prev").disabled = r.page <= 1;
+      $("#next").disabled = r.page >= pages;
+
+      if (!rows.length) {
+        $("#rows").innerHTML = `<tr><td colspan="5">
+        <div class="empty" style="border:0;background:transparent;padding:36px">
+          <div class="glyph">▤</div><div class="t">没有匹配的题目</div>
+          <div class="d">换个关键词或方向试试，也可以直接新建一道。</div>
+        </div></td></tr>`;
+        return;
+      }
+
+      $("#rows").innerHTML = rows
+        .map(
+          (q) => `<tr data-id="${q.id}">
+          <td class="col-num" style="text-align:left">${q.id}</td>
+          <td>
+            <div class="row wrap" style="gap:5px">
+              <span class="pill info">${q.direction}</span>
+              <span class="pill">${q.difficulty}</span>
+              <span class="pill violet">${q.question_type}</span>
+            </div>
+          </td>
+          <td><div class="content-cell clamp-2" title="${String(q.content).replace(/"/g, "&quot;")}">${q.content}</div></td>
+          <td>${q.embedding_ref
+            ? '<span class="sync"><span class="dot done"></span><span style="color:var(--muted)">已入库</span></span>'
+            : '<span class="sync"><span class="dot warn"></span><span style="color:var(--muted)">待入库</span></span>'}</td>
+          <td>
+            <div class="row" style="justify-content:flex-end;gap:6px">
+              <button class="btn btn-sm" data-act="view">查看</button>
+              <button class="btn btn-sm" data-act="edit">编辑</button>
+              <button class="btn btn-sm btn-danger" data-act="del">删除</button>
+            </div>
+          </td>
+        </tr>`
+        )
+        .join("");
+    } catch (ex) {
+      Om.toast("err", "题库加载失败", ex.message || String(ex));
+    }
+  }
+
+  let kwTimer = null;
+  $("#kw").addEventListener("input", (e) => {
+    page.kw = e.target.value.trim();
+    page.n = 1;
+    clearTimeout(kwTimer);
+    kwTimer = setTimeout(load, 250);
+  });
+  $("#dir").addEventListener("change", (e) => { page.dir = e.target.value; page.n = 1; load(); });
+  $("#size").addEventListener("change", (e) => { page.size = Number(e.target.value); page.n = 1; load(); });
+  $("#prev").addEventListener("click", () => { page.n = Math.max(1, page.n - 1); load(); });
+  $("#next").addEventListener("click", () => { page.n += 1; load(); });
+
+  /* ---------------- 表单 ---------------- */
+  function form(q) {
+    const isNew = !q;
+    return `
+      <div class="form-row" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+        <div class="field">
+          <label class="label" for="f-dir">技术方向 <span class="req">*</span></label>
+          <select class="select" id="f-dir">
+            ${["后端","前端","算法","数据库","操作系统","计算机网络"]
+              .map((d) => `<option${q && q.direction === d ? " selected" : ""}>${d}</option>`).join("")}
+          </select>
+        </div>
+        <div class="field">
+          <label class="label" for="f-diff">难度 <span class="req">*</span></label>
+          <select class="select" id="f-diff">
+            ${["初级","中级","高级"].map((d) => `<option${q && q.difficulty === d ? " selected" : ""}>${d}</option>`).join("")}
+          </select>
+        </div>
+        <div class="field">
+          <label class="label" for="f-type">题型 <span class="req">*</span></label>
+          <select class="select" id="f-type">
+            ${["八股","算法","业务"].map((d) => `<option${q && q.question_type === d ? " selected" : ""}>${d}</option>`).join("")}
+          </select>
+        </div>
+      </div>
+      <div class="field mt-3">
+        <label class="label" for="f-content">题干 <span class="req">*</span></label>
+        <textarea class="textarea" id="f-content" style="min-height:88px" placeholder="完整题干；算法题把输入输出样例写进「参考答案」或考点里">${q ? q.content : ""}</textarea>
+      </div>
+      <div class="field mt-3">
+        <label class="label" for="f-ref">参考答案</label>
+        <textarea class="textarea" id="f-ref" placeholder="评分与追问都会以它为参照">${q ? q.reference_answer : ""}</textarea>
+      </div>
+      <div class="field mt-3">
+        <label class="label" for="f-kp">考察点</label>
+        <input class="input" id="f-kp" placeholder="用 / 分隔，如：最左前缀 / 覆盖索引 / 索引下推" value="${q ? q.key_points : ""}" />
+      </div>
+      <div class="syncbar mt-4" id="syncbar" style="display:none">
+        <div class="line"><span class="k">PG 落库</span><span class="dot running"></span><span id="sb-pg">等待中</span></div>
+        <div class="line"><span class="k">BGE-M3 向量化</span><span class="dot running"></span><span id="sb-emb">等待中</span></div>
+        <div class="line"><span class="k">Qdrant upsert</span><span class="dot running"></span><span id="sb-qd">等待中</span></div>
+      </div>
+      ${isNew ? "" : `<p class="hint mt-3">编辑会用同一个 point id 覆盖写回向量库，不会留下孤儿向量。</p>`}`;
+  }
+
+  function readForm() {
+    return {
+      direction: $("#f-dir").value,
+      difficulty: $("#f-diff").value,
+      question_type: $("#f-type").value,
+      content: $("#f-content").value.trim(),
+      reference_answer: $("#f-ref").value.trim(),
+      key_points: $("#f-kp").value.trim(),
+    };
+  }
+
+  /**
+   * 双写进度条。三步（PG / 向量化 / Qdrant）都在后端一次请求里完成，
+   * 前端拿不到逐段进度，所以按请求的生命周期推进：发出 → 等待 → 返回后置为完成。
+   */
+  async function runSync(m, request) {
+    const bar = m.el.querySelector("#syncbar");
+    bar.style.display = "";
+    const line = (sel, txt, state) => {
+      const el = m.el.querySelector(sel);
+      el.textContent = txt;
+      el.parentElement.querySelector(".dot").className = `dot ${state}`;
+    };
+    line("#sb-pg", "写入中…", "running");
+    line("#sb-emb", "等待中", "running");
+    line("#sb-qd", "等待中", "running");
+    const res = await request();
+    line("#sb-pg", `已写入 · question_id ${res.id}`, "done");
+    line("#sb-emb", "向量化完成 · dim=1024", "done");
+    line("#sb-qd", `已 upsert · ${res.embedding_ref}`, "done");
+    return res;
+  }
+
+  $("#btn-new").addEventListener("click", () => {
+    const m = Om.modal({
+      title: "新建题目",
+      wide: true,
+      body: form(null),
+      foot: `<button class="btn" data-close>取消</button><button class="btn btn-primary" data-ok>创建并向量化</button>`,
+    });
+    m.el.querySelector("[data-ok]").addEventListener("click", async () => {
+      const p = readForm();
+      if (!p.content || p.content.length < 8) return Om.toast("err", "题干太短", "至少 8 个字，否则向量化后没有区分度。");
+      const ok = m.el.querySelector("[data-ok]");
+      ok.disabled = true;
+      try {
+        // 后端在这一步完成：PG 落库 → BGE-M3 向量化 → Qdrant upsert → 回填 embedding_ref
+        await runSync(m, () => Om.api("POST", "/api/v1/admin/questions", p));
+        m.close();
+        await load();
+        Om.toast("ok", "题目已创建", "已同步到检索库，新题立刻可被检索到");
+      } catch (ex) {
+        ok.disabled = false;
+        Om.toast("err", "创建失败", ex.message || String(ex));
+      }
+    });
+  });
+
+  $("#rows").addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-act]");
+    if (!btn) return;
+    const id = Number(btn.closest("tr").dataset.id);
+    const q = rows.find((x) => x.id === id);
+    if (!q) return;
+    const act = btn.dataset.act;
+
+    if (act === "view") {
+      Om.modal({
+        title: `题目 #${q.id}`,
+        wide: true,
+        body: `
+          <div class="row wrap" style="gap:6px">
+            <span class="pill info">${q.direction}</span><span class="pill">${q.difficulty}</span>
+            <span class="pill violet">${q.question_type}</span>
+            <span class="pill ${q.embedding_ref ? "success" : "warn"}">${q.embedding_ref ? "已入检索库" : "待入库"}</span>
+          </div>
+          <div class="qprev mt-4"><div class="lb">题干</div>${q.content}</div>
+          <div class="qprev"><div class="lb">参考答案</div>${q.reference_answer || "—"}</div>
+          <div class="qprev"><div class="lb">考察点</div>${q.key_points || "—"}</div>`,
+        foot: `<button class="btn" data-close>关闭</button>`,
+      });
+    }
+
+    if (act === "edit") {
+      const m = Om.modal({
+        title: `编辑题目 #${q.id}`,
+        wide: true,
+        body: form(q),
+        foot: `<button class="btn" data-close>取消</button><button class="btn btn-primary" data-ok>保存并重新向量化</button>`,
+      });
+      m.el.querySelector("[data-ok]").addEventListener("click", async () => {
+        const p = readForm();
+        if (!p.content || p.content.length < 8) return Om.toast("err", "题干太短", "至少 8 个字。");
+        const ok = m.el.querySelector("[data-ok]");
+        ok.disabled = true;
+        try {
+          await runSync(m, () => Om.api("PUT", `/api/v1/admin/questions/${id}`, p));
+          m.close();
+          await load();
+          Om.toast("ok", "题目已更新", "题库与检索索引均已同步");
+        } catch (ex) {
+          ok.disabled = false;
+          Om.toast("err", "保存失败", ex.message || String(ex));
+        }
+      });
+    }
+
+    if (act === "del") {
+      const ok = await Om.confirm({
+        title: "删除题目",
+        msg: `将删除题目 #${q.id}（${q.direction} · ${q.difficulty} · ${q.question_type}）。`,
+        detail: `<div class="warnbox"><span>⚠</span><span>
+          删除会同时清掉这道题的检索索引。若只删题库、不同步索引，后续检索仍会命中这道已删的题，
+          并在评分时作为参照喂给模型。</span></div>`,
+        ok: "删除并同步向量库",
+        danger: true,
+      });
+      if (!ok) return;
+      try {
+        await Om.api("DELETE", `/api/v1/admin/questions/${id}`);
+        await load();
+        Om.toast("ok", "题目已删除", "题库与检索索引均已移除");
+      } catch (ex) {
+        Om.toast("err", "删除失败", ex.message || String(ex));
+      }
+    }
+  });
+
+  await load();
+})().catch((e) => Om.toast("err", "页面初始化失败", e.message || String(e)));
+</script>
+</body>
+</html>

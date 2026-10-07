@@ -1,5 +1,5 @@
 """面试会话与消息数据访问。"""
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.resume import InterviewMessage, InterviewSession
@@ -66,3 +66,24 @@ async def list_messages(db: AsyncSession, session_id: int) -> list[InterviewMess
     )
     result = await db.execute(stmt)
     return list(result.scalars().all())
+
+
+async def count_hr_by_sessions(
+    db: AsyncSession, session_ids: list[int]
+) -> dict[int, int]:
+    """批量统计每个会话的 HR 提问条数（= 面试轮数）。
+
+    一次 group by 查回来，避免列表页为每场面试各查一次（N+1）。
+    """
+    if not session_ids:
+        return {}
+    stmt = (
+        select(InterviewMessage.session_id, func.count())
+        .where(
+            InterviewMessage.session_id.in_(session_ids),
+            InterviewMessage.role == "hr",
+        )
+        .group_by(InterviewMessage.session_id)
+    )
+    rows = await db.execute(stmt)
+    return {sid: int(n) for sid, n in rows.all()}

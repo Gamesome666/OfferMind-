@@ -73,3 +73,19 @@ async def count(db: AsyncSession) -> int:
     from sqlalchemy import func
 
     return int((await db.execute(select(func.count()).select_from(User))).scalar_one())
+
+
+async def count_admins(db: AsyncSession) -> int:
+    """管理员人数。"""
+    from sqlalchemy import func
+
+    stmt = select(func.count()).select_from(User).where(User.is_admin.is_(True))
+    return int((await db.execute(stmt)).scalar_one())
+
+
+async def count_created_since(db: AsyncSession, since) -> int:
+    """某个时间点之后注册的用户数（后台概览的「本周新增」）。"""
+    from sqlalchemy import func
+
+    stmt = select(func.count()).select_from(User).where(User.created_at >= since)
+    return int((await db.execute(stmt)).scalar_one())

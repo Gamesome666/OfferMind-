@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>模拟面试 · OfferMind</title>
+<link rel="stylesheet" href="assets/tokens.css" />
+<style>
+  .side { position: sticky; top: 20px; display: grid; gap: 16px; }
+  .chatwrap {
+    display: flex; flex-direction: column; height: calc(100vh - 230px); min-height: 480px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden;
+  }
+  .chathead {
+    display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+    border-bottom: 1px solid var(--border); background: var(--surface);
+  }
+  .chathead .who {
+    width: 32px; height: 32px; border-radius: var(--r-sm); background: var(--brand);
+    color: #fff; display: grid; place-items: center; font-family: var(--font-mono); font-size: 11px;
+  }
+  .chathead .nm { font-size: 13.5px; font-weight: 560; }
+  .chathead .st { font-size: 11.5px; color: var(--muted); font-family: var(--font-mono); }
+  .chatscroll { flex: 1; overflow-y: auto; background: var(--bg); }
+  .composer { border-top: 1px solid var(--border); padding: 12px 14px; background: var(--surface); }
+  .composer .box { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 10px; align-items: end; }
+  .composer textarea {
+    min-height: 46px; max-height: 150px; resize: none; font-size: 13.5px;
+    padding: 12px 13px; line-height: 1.55;
+  }
+  .hintline { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; gap: 12px; }
+
+  .sess {
+    display: grid; grid-template-columns: 62px minmax(0,1fr) auto; gap: 11px; align-items: center;
+    padding: 10px 15px; border-bottom: 1px solid var(--border); cursor: pointer;
+  }
+  .sess:last-child { border-bottom: 0; }
+  .sess:hover { background: var(--surface-2); }
+  .sess.on { background: var(--accent-soft); }
+  .sess .sc { font-family: var(--font-mono); font-size: 15px; font-weight: 520; }
+  .sess .nm { font-size: 12.5px; }
+  .sess .cap { font-size: 10.5px; color: var(--faint); font-family: var(--font-mono); }
+
+  .rep-score { display: grid; grid-template-columns: 96px minmax(0,1fr); gap: 18px; align-items: center; }
+  .rep-score .n { font-family: var(--font-mono); font-size: 40px; font-weight: 500; letter-spacing: -0.035em; line-height: 1; }
+  .roundfb { display: grid; gap: 9px; }
+  .roundfb li { font-size: 12.5px; line-height: 1.62; color: var(--fg-2); padding: 9px 11px; border-left: 2px solid var(--border-strong); background: var(--surface-2); border-radius: 0 var(--r-xs) var(--r-xs) 0; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div id="rail-slot"></div>
+
+  <main class="main">
+    <div class="page">
+
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Interview · 一问一答压力面</div>
+          <div class="title-row" style="margin-top:7px">
+            <h1 class="h1">模拟面试</h1>
+            <span class="pill" id="sess-pill">未开始</span>
+            <span class="pill accent" id="stream-pill" style="display:none"><span class="dot running"></span>HR 正在回复</span>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn" id="btn-load">载入历史会话</button>
+          <button class="btn btn-accent" id="btn-sum" disabled>总结面试</button>
+          <button class="btn btn-primary" id="btn-start">开始新面试</button>
+        </div>
+      </div>
+
+      <div class="grid g-main-side">
+
+        <!-- ===== 左：对话 ===== -->
+        <div class="stack">
+          <section class="card" data-od-id="interview-card-01" style="padding:16px">
+            <div class="cfgbar" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(0,1.6fr);gap:14px;align-items:end">
+              <div class="field">
+                <label class="label" for="dir">方向</label>
+                <select class="select" id="dir"><option>后端</option><option>前端</option><option>算法</option><option>数据库</option></select>
+              </div>
+              <div class="field">
+                <label class="label" for="diff">难度</label>
+                <select class="select" id="diff"><option>初级</option><option selected>中级</option><option>高级</option></select>
+              </div>
+              <div class="field">
+                <label class="label" for="style">面试风格</label>
+                <select class="select" id="style"><option>项目深挖</option><option>压力面</option><option>八股连问</option><option>系统设计</option></select>
+              </div>
+              <div class="field">
+                <label class="label" for="resume">简历依据 <span class="cap">结构化简历 JSON</span></label>
+                <input class="input mono" id="resume" value='{"name":"马乾恩","skills":["Python","FastAPI","LangGraph","Qdrant"]}' />
+              </div>
+            </div>
+          </section>
+
+          <div class="chatwrap">
+            <div class="chathead">
+              <div class="who">HR</div>
+              <div class="grow">
+                <div class="nm">AI 面试官</div>
+                <div class="st" id="chat-st">等待开场 · 未建立会话</div>
+              </div>
+              <span class="pill mono" id="turn-pill">第 0 轮</span>
+            </div>
+            <div class="chatscroll" id="chat"></div>
+            <div class="composer">
+              <div class="box">
+                <textarea class="textarea" id="msg" placeholder="像在真实面试里一样回答。HR 会根据你的上一句继续追问。"></textarea>
+                <button class="btn btn-accent btn-lg" id="btn-send" disabled>发送</button>
+              </div>
+              <div class="hintline">
+                <span class="hint">按 <kbd class="mono" style="border:1px solid var(--border-strong);border-radius:3px;padding:0 4px">Ctrl</kbd> + <kbd class="mono" style="border:1px solid var(--border-strong);border-radius:3px;padding:0 4px">Enter</kbd> 快速发送</span>
+                <span class="cap" id="tok">回复按 token 逐字出现</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== 右：可观测 + 会话 ===== -->
+        <div class="side">
+          <div id="trace-slot"></div>
+
+          <section class="card" data-od-id="interview-card-02">
+            <div class="card-head">
+              <div class="h3">历史会话</div>
+              <span class="small">随时可回到任意一场</span>
+            </div>
+            <div class="card-body tight" id="sessions"></div>
+          </section>
+
+          <section class="card" data-od-id="interview-card-03" id="repcard" style="display:none">
+            <div class="card-head"><div class="h3">面试报告</div><span class="pill success">已总结</span></div>
+            <div class="card-body">
+              <div class="rep-score">
+                <div><div class="n" id="rep-total">—</div><div class="cap mono">/ 100 总分</div></div>
+                <p class="lead" style="font-size:13px" id="rep-comment"></p>
+              </div>
+              <hr class="hair" />
+              <div class="eyebrow">能力雷达</div>
+              <div class="mt-2" style="display:grid;place-items:center" id="rep-radar"></div>
+              <div class="eyebrow mt-4">逐轮评价</div>
+              <ul class="roundfb mt-2" id="rep-rounds"></ul>
+              <div class="eyebrow mt-4">改进建议</div>
+              <ul class="roundfb mt-2" id="rep-improve"></ul>
+            </div>
+          </section>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="assets/app.js"></script>
+<script src="assets/api-real.js"></script>
+<script>
+(async function () {
+  Om.mount("interview");
+  document.getElementById("trace-slot").innerHTML = Om.tracePanel("trace", "等待执行");
+  const trace = Om.bindTrace("trace");
+  const $ = (s) => document.querySelector(s);
+
+  const S = { sessionId: null, turn: 0, busy: false, msgs: [], report: null };
+
+  /** 步骤事件才进轨迹面板——面板按 id 做行键，「结果」「hr_message」没有 id。 */
+  function pushTrace(ev) {
+    if (ev && ev.id) trace.push(ev);
+  }
+
+  /* ---------------- 会话列表 ---------------- */
+  async function loadSessions() {
+    try {
+      const list = await Om.api("GET", "/api/v1/interview/sessions");
+      $("#sessions").innerHTML = list.length
+        ? list
+            .map(
+              (s) => `<div class="sess${s.id === S.sessionId ? " on" : ""}" data-id="${s.id}">
+          <span class="sc ${s.total_score ? "" : "dim"}">${s.total_score != null ? s.total_score : "—"}</span>
+          <span>
+            <span class="nm">${s.config.direction || "—"} · ${s.config.difficulty || "—"} · ${s.config.style || "—"}</span>
+            <span class="cap" style="display:block;margin-top:2px">${s.rounds} 轮 · ${Om.relDay(s.updated_at)} ${Om.hhmm(s.updated_at)}</span>
+          </span>
+          <span class="pill ${s.status === "finished" ? "success" : "accent"}">${s.status === "finished" ? "已总结" : "进行中"}</span>
+        </div>`
+            )
+            .join("")
+        : `<div class="empty" style="border:0;background:transparent"><div class="d">还没有面试记录。配置好方向与难度后点「开始新面试」。</div></div>`;
+    } catch (ex) {
+      Om.toast("err", "会话列表加载失败", ex.message || String(ex));
+    }
+  }
+
+  $("#sessions").addEventListener("click", (e) => {
+    const el = e.target.closest(".sess");
+    if (el) openSession(Number(el.dataset.id));
+  });
+
+  /** GET /api/v1/interview/sessions/{id} —— 一次拿回配置 + 全部消息 + 报告，不用重跑模型 */
+  async function openSession(id) {
+    try {
+      const s = await Om.api("GET", `/api/v1/interview/sessions/${id}`);
+      S.sessionId = id;
+      S.msgs = s.messages.slice();
+      S.turn = s.messages.filter((m) => m.role === "hr").length;
+      S.report = s.report && s.report.total_score ? s.report : null;
+
+      $("#chat").innerHTML = "";
+      S.msgs.forEach((m) => bubble(m.role === "hr" ? "hr" : "me", m.content, false));
+      $("#sess-pill").textContent = `会话 #${id} · ${s.status === "finished" ? "已总结" : "进行中"}`;
+      $("#chat-st").textContent = `${s.config.direction || "—"} · ${s.config.difficulty || "—"} · ${s.config.style || "—"}`;
+      $("#turn-pill").textContent = `第 ${S.turn} 轮`;
+      $("#btn-send").disabled = s.status === "finished";
+      $("#btn-sum").disabled = s.status === "finished" || S.msgs.length === 0;
+      if (S.report) renderReport(S.report);
+      else $("#repcard").style.display = "none";
+      await loadSessions();
+      Om.toast("info", "已载入会话", `恢复 ${s.messages.length} 条消息，无需重跑模型`);
+    } catch (ex) {
+      Om.toast("err", "会话不存在", ex.message || "该会话已被删除或无权访问（跨用户一律 404）。");
+    }
+  }
+
+  /* ---------------- 气泡 ---------------- */
+  function bubble(who, text, typing) {
+    const el = document.createElement("div");
+    el.className = `bubble ${who}`;
+    el.innerHTML = `<span class="who">${who === "hr" ? "HR" : "我"}</span>
+      <div class="body">${text}${typing ? '<span class="caret"></span>' : ""}</div>`;
+    $("#chat").appendChild(el);
+    $("#chat").scrollTop = $("#chat").scrollHeight;
+    return el.querySelector(".body");
+  }
+
+  /* ---------------- 流式一问一答 ---------------- */
+  /**
+   * 统一走 /interview/chat/stream：
+   *   session_id 为空 → 建会话，HR 说开场白
+   *   message 非空    → 候选人发言，HR 接着说
+   *   summarize=true  → 不再发言，按整场对话出报告
+   */
+  function chatRequest(body, { onDone, onError } = {}) {
+    if (S.busy) return;
+    S.busy = true;
+    $("#btn-send").disabled = true;
+    $("#btn-sum").disabled = true;
+    $("#stream-pill").style.display = "";
+    trace.reset();
+    trace.live("running");
+
+    // 这一轮 HR 的气泡先建好，token 到了就往里追加
+    let bodyEl = null;
+    let text = "";
+
+    Om.sse("/api/v1/interview/chat/stream", {
+      body: {
+        resume: $("#resume").value.trim(),
+        direction: $("#dir").value,
+        difficulty: $("#diff").value,
+        style: $("#style").value,
+        session_id: S.sessionId,
+        message: body.message || "",
+        summarize: !!body.summarize,
+      },
+      onEvent: (ev) => {
+        if (ev.type === "session") {
+          S.sessionId = ev.payload.session_id;
+          $("#sess-pill").textContent = `会话 #${S.sessionId} · 进行中`;
+          return;
+        }
+        pushTrace(ev);
+        if (ev.type === "结果" && ev.payload && ev.payload.report) {
+          S.report = ev.payload.report;
+        }
+      },
+      onToken: (t) => {
+        if (!bodyEl) bodyEl = bubble("hr", "", true);
+        text += t;
+        const caret = bodyEl.querySelector(".caret");
+        bodyEl.textContent = text;
+        if (caret) bodyEl.appendChild(caret);
+        $("#chat").scrollTop = $("#chat").scrollHeight;
+      },
+      onDone: () => {
+        S.busy = false;
+        $("#stream-pill").style.display = "none";
+        trace.live("done");
+        if (bodyEl) {
+          // 收掉光标，并把 HR 这句话记进本地消息列表
+          const caret = bodyEl.querySelector(".caret");
+          if (caret) caret.remove();
+          S.msgs.push({ role: "hr", content: text });
+          S.turn += 1;
+          $("#turn-pill").textContent = `第 ${S.turn} 轮`;
+        }
+        // 恢复可交互状态。放在这里而不是各调用方的 onDone 里 ——
+        // 「开始新面试」那条路径也要恢复，否则 HR 问完第一句用户答不了。
+        // 刚跑完总结的会话已经结束，保持禁用。
+        const justSummarized = !!body.summarize;
+        $("#btn-send").disabled = justSummarized || !S.sessionId;
+        $("#btn-sum").disabled = justSummarized || S.turn === 0;
+        if (onDone) onDone();
+      },
+      onError: (ev) => {
+        S.busy = false;
+        $("#stream-pill").style.display = "none";
+        trace.live("done");
+        // 401 已由接入层处理（清令牌跳登录），其余错误原样提示后端的 detail
+        Om.toast("err", "面试请求失败", (ev.payload && ev.payload.message) || "未知错误");
+        $("#btn-send").disabled = false;
+        $("#btn-sum").disabled = S.turn === 0;
+        if (onError) onError(ev);
+      },
+    });
+  }
+
+  /* ---------------- 总结 ---------------- */
+  function summarize() {
+    if (S.turn === 0) return Om.toast("err", "还没有对话", "至少完成一轮问答才能总结。");
+    trace.setTitle("interview/chat/stream · summarize");
+    chatRequest(
+      { summarize: true },
+      {
+        onDone: async () => {
+          const rep = S.report;
+          $("#btn-send").disabled = true;
+          $("#btn-sum").disabled = true;
+          if (rep) {
+            $("#sess-pill").textContent = `会话 #${S.sessionId} · 已总结`;
+            renderReport(rep);
+            // 历史记录由后端在总结时写入，这里只刷新列表
+            await loadSessions();
+            Om.toast("ok", "面试已总结", `总分 ${rep.total_score} / 100，已写入历史记录`);
+          } else {
+            Om.toast("err", "总结失败", "没有收到报告");
+          }
+        },
+      }
+    );
+  }
+
+  function renderReport(rep) {
+    $("#repcard").style.display = "";
+    $("#rep-total").textContent = rep.total_score;
+    $("#rep-comment").textContent = rep.overall_comment;
+    $("#rep-radar").innerHTML = Om.radar(rep.radar, { size: 236 });
+    $("#rep-rounds").innerHTML = rep.round_feedback.map((x) => `<li>${x}</li>`).join("");
+    $("#rep-improve").innerHTML = rep.improvements.map((x) => `<li>${x}</li>`).join("");
+  }
+
+  /* ---------------- 事件绑定 ---------------- */
+  $("#btn-start").addEventListener("click", async () => {
+    if (S.busy) return;
+    if (!$("#resume").value.trim()) {
+      return Om.toast("err", "缺少简历依据", "面试官要基于简历深挖提问，请填结构化简历 JSON。");
+    }
+    // 新会话：session_id 传 null，后端建会话后由 HR 说开场白
+    S.sessionId = null;
+    S.turn = 0;
+    S.msgs = [];
+    S.report = null;
+    $("#chat").innerHTML = "";
+    $("#repcard").style.display = "none";
+    $("#sess-pill").textContent = "正在建立会话…";
+    $("#chat-st").textContent = `${$("#dir").value} · ${$("#diff").value} · ${$("#style").value}`;
+    $("#turn-pill").textContent = "第 0 轮";
+    trace.setTitle("interview/chat/stream · 开场");
+    chatRequest({}, { onDone: () => loadSessions() });
+  });
+
+  $("#btn-send").addEventListener("click", () => {
+    const v = $("#msg").value.trim();
+    if (v.length < 5) return Om.toast("err", "回答太短", "至少写 5 个字，HR 才有上下文可以追问。");
+    if (!S.sessionId) return Om.toast("err", "尚未开始", "先点「开始新面试」建立会话。");
+    bubble("me", v, false);
+    S.msgs.push({ role: "user", content: v });
+    $("#msg").value = "";
+    trace.setTitle(`interview/chat/stream · turn ${S.turn + 1}`);
+    // 发送/总结按钮的恢复由 chatRequest 的收尾统一处理
+    chatRequest({ message: v }, { onDone: () => loadSessions() });
+  });
+
+  $("#msg").addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); $("#btn-send").click(); }
+  });
+
+  $("#btn-sum").addEventListener("click", summarize);
+
+  $("#btn-load").addEventListener("click", async () => {
+    try {
+      const list = await Om.api("GET", "/api/v1/interview/sessions");
+      const act = list.find((s) => s.status === "active") || list[0];
+      if (!act) return Om.toast("info", "没有会话", "还没有面试记录。");
+      await openSession(act.id);
+    } catch (ex) {
+      Om.toast("err", "载入失败", ex.message || String(ex));
+    }
+  });
+
+  await loadSessions();
+})().catch((e) => Om.toast("err", "页面初始化失败", e.message || String(e)));
+</script>
+</body>
+</html>

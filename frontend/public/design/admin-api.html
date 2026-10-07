@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>接口总览 · OfferMind</title>
+<link rel="stylesheet" href="assets/tokens.css" />
+<style>
+  .split { display: grid; grid-template-columns: minmax(0,1.15fr) minmax(0,1fr); gap: 18px; align-items: start; }
+  @media (max-width: 1160px) { .split { grid-template-columns: minmax(0,1fr); } }
+
+  .apibar { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .search { position: relative; }
+  .search .input { width: 230px; padding-left: 30px; }
+  .search::before { content: "⌕"; position: absolute; left: 10px; top: 7px; color: var(--faint); font-size: 14px; }
+
+  .tagblock { border-bottom: 1px solid var(--border); }
+  .tagblock:last-child { border-bottom: 0; }
+  .taghead {
+    display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: var(--surface-2);
+    position: sticky; top: 0; z-index: 2; border-bottom: 1px solid var(--border);
+  }
+  .taghead .t { font-size: 12.5px; font-weight: 600; }
+  .taghead .c { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+
+  .eprow {
+    display: grid; grid-template-columns: 52px minmax(0,1fr) auto; gap: 11px; align-items: center;
+    padding: 8px 16px; cursor: pointer; border-left: 2px solid transparent;
+  }
+  .eprow:hover { background: var(--surface-2); }
+  .eprow.on { background: var(--accent-soft); border-left-color: var(--accent); }
+  .eprow .p { font-family: var(--font-mono); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+  .eprow .flags { display: flex; gap: 4px; }
+  .eprow .flags .pill { height: 17px; font-size: 9.5px; padding: 0 5px; }
+  .eprow .lock { color: var(--faint); font-size: 11px; }
+
+  /* 调试台 */
+  .console { position: sticky; top: 20px; display: grid; gap: 14px; }
+  .urlbar { display: grid; grid-template-columns: 62px minmax(0,1fr); gap: 9px; align-items: center; }
+  .urlbar .u {
+    font-family: var(--font-mono); font-size: 12.5px; padding: 8px 11px;
+    background: var(--ink-bg); color: var(--ink-fg); border-radius: var(--r-sm);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .urlbar .m { height: 33px; min-width: 0; }
+  .tabsmini { display: flex; gap: 3px; border-bottom: 1px solid var(--border); }
+  .tabsmini button {
+    padding: 7px 11px; font-size: 12.5px; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .tabsmini button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--brand); font-weight: 540; }
+  .pane { padding: 14px 0 0; }
+
+  .kvrow { display: grid; grid-template-columns: 140px minmax(0,1fr); gap: 10px; align-items: center; margin-bottom: 9px; }
+  .kvrow .k { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); }
+  .kvrow .k b { color: var(--fg-2); font-weight: 500; }
+
+  pre.out {
+    margin: 0; background: var(--ink-bg); color: var(--ink-fg); border-radius: var(--r-sm);
+    padding: 13px 14px; font-family: var(--font-mono); font-size: 11.5px; line-height: 1.65;
+    max-height: 400px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+  pre.out .k { color: oklch(76% 0.07 195); }
+  pre.out .s { color: oklch(78% 0.09 130); }
+  pre.out .n { color: oklch(80% 0.1 72); }
+  pre.out .b { color: oklch(74% 0.12 300); }
+  .statusline {
+    display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-radius: var(--r-sm);
+    background: var(--surface-2); border: 1px solid var(--border); font-family: var(--font-mono); font-size: 11.5px;
+  }
+  .statusline .code { font-weight: 600; }
+  .statusline .code.ok { color: var(--success); }
+  .statusline .code.err { color: var(--danger); }
+  .tokenbox {
+    font-family: var(--font-mono); font-size: 11px; color: var(--muted);
+    padding: 7px 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .tokenbox b { color: var(--fg-2); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div id="rail-slot"></div>
+
+  <main class="main">
+    <div class="page" style="max-width:1600px">
+
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Admin · API Surface</div>
+          <div class="title-row" style="margin-top:7px">
+            <h1 class="h1">接口总览</h1>
+            <span class="pill accent" id="cnt-pill">—</span>
+            <span class="pill">统一前缀 /api/v1</span>
+          </div>
+          <p class="lead" style="margin-top:8px;font-size:14px">
+            全部端点与后端 <code class="mono">app/api/v1/*</code> 一一对应。带 <b>SSE</b> 标记的走
+            <code class="mono">text/event-stream</code>，每步推同 id 的 running / done 双事件。
+          </p>
+        </div>
+        <div class="actions">
+          <button class="btn" id="btn-health">健康检查</button>
+          <a class="btn btn-ghost" href="admin.html">返回概览</a>
+        </div>
+      </div>
+
+      <div class="split">
+
+        <!-- ============ 左：清单 ============ -->
+        <section class="card" data-od-id="admin-api-card-01" style="overflow:hidden">
+          <div class="apibar">
+            <div class="search"><input class="input" id="kw" placeholder="搜索路径或说明" /></div>
+            <div class="seg" id="meth">
+              <button data-v="" aria-pressed="true">全部</button>
+              <button data-v="GET" aria-pressed="false">GET</button>
+              <button data-v="POST" aria-pressed="false">POST</button>
+              <button data-v="PATCH/PUT" aria-pressed="false">写</button>
+              <button data-v="DELETE" aria-pressed="false">DELETE</button>
+            </div>
+            <span class="spacer" style="margin-left:auto"></span>
+            <label class="check"><input type="checkbox" id="only-sse" /> <span>只看流式</span></label>
+          </div>
+          <div id="list" style="max-height:calc(100vh - 300px);overflow-y:auto"></div>
+        </section>
+
+        <!-- ============ 右：调试台 ============ -->
+        <div class="console">
+          <section class="card" data-od-id="admin-api-card-02">
+            <div class="card-head">
+              <div class="h3">请求调试台</div>
+              <span class="pill mono" id="dbg-auth">—</span>
+            </div>
+            <div class="card-body">
+              <div class="urlbar">
+                <span class="m m-GET" id="dbg-m">GET</span>
+                <span class="u" id="dbg-url">选择左侧任意端点</span>
+              </div>
+              <p class="hint mt-2" id="dbg-desc">点一条端点，这里会出现它的请求构造与响应。</p>
+
+              <div class="tabsmini mt-4" id="dbgtabs">
+                <button data-v="params" aria-selected="true">参数</button>
+                <button data-v="body" aria-selected="false">请求体</button>
+                <button data-v="headers" aria-selected="false">请求头</button>
+              </div>
+
+              <div class="pane" id="pane-params"></div>
+              <div class="pane" id="pane-body" style="display:none"></div>
+              <div class="pane" id="pane-headers" style="display:none"></div>
+
+              <div class="row mt-4" style="gap:9px">
+                <button class="btn btn-primary" id="btn-send">发送请求</button>
+                <span class="grow"></span>
+                <span class="cap mono" id="dbg-time">—</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="card" data-od-id="admin-api-card-03">
+            <div class="card-head">
+              <div class="h3">响应</div>
+              <span class="pill" id="resp-pill">等待发送</span>
+            </div>
+            <div class="card-body">
+              <div class="statusline" id="statusline" style="margin-bottom:12px">
+                <span class="code">—</span><span>未发送</span>
+              </div>
+              <pre class="out" id="out">// 选择端点后点「发送请求」</pre>
+            </div>
+          </section>
+
+          <section class="card" data-od-id="admin-api-card-04">
+            <div class="card-head"><div class="h3">鉴权与隔离约定</div></div>
+            <div class="card-body">
+              <div class="stack-sm" style="font-size:12.5px">
+                <div class="tokenbox">Authorization: <b>Bearer &lt;jwt&gt;</b> · 由 POST /auth/login 签发</div>
+                <div class="tokenbox">数据隔离：所有查询强制 <b>user_id</b> 过滤</div>
+                <div class="tokenbox">跨用户访问 → <b>404</b>（不是 403，避免泄露记录是否存在）</div>
+                <div class="tokenbox">管理端点挂在 <b>get_current_admin</b> 之下，非管理员一律 <b>403</b></div>
+                <div class="tokenbox">SSE 响应头：<b>X-Accel-Buffering: no</b>（关闭反向代理缓冲）</div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="assets/app.js"></script>
+<script src="assets/api-real.js"></script>
+<script>
+(async function () {
+  Om.mount("admin-api");
+  const $ = (s) => document.querySelector(s);
+  let filter = { kw: "", m: "", sse: false };
+  let cur = null;
+  let tab = "params";
+  /** 真实端点清单：从 FastAPI 的 /openapi.json 生成，不是写死的 */
+  let ENDPOINTS = [];
+
+  const TAGS = {
+    health: "健康检查",
+    auth: "认证",
+    training: "刷题训练",
+    answers: "错题本",
+    resume: "简历诊断",
+    interview: "模拟面试",
+    report: "能力报告",
+    history: "历史记录",
+    admin: "管理后台",
+  };
+
+  const BODIES = {
+    "/api/v1/auth/register": { email: "new@example.com", password: "offermind123", nickname: "新用户" },
+    "/api/v1/auth/login": { email: "admin@offermind.dev", password: "admin123456" },
+    "/api/v1/training/question": { direction: "后端", difficulty: "中级", question_type: "八股", weak_points: "" },
+    "/api/v1/training/question/stream": { direction: "后端", difficulty: "中级", question_type: "八股", weak_points: "" },
+    "/api/v1/training/grade": { question: "谈谈 MySQL 最左前缀原则", answer: "联合索引从最左列开始匹配……", question_id: null },
+    "/api/v1/training/grade/stream": { question: "谈谈 MySQL 最左前缀原则", answer: "……", question_id: null },
+    "/api/v1/training/followup": { question: "谈谈 MySQL 最左前缀原则", answer: "……", score_summary: "总分 3.4" },
+    "/api/v1/training/followup/stream": { question: "……", answer: "……", score_summary: "总分 3.4" },
+    "/api/v1/resume/diagnose": { resume_text: "姓名：张三　技能：Python、Redis", jd_text: "后端开发实习生，要求熟悉 Python 与 PostgreSQL。" },
+    "/api/v1/resume/diagnose/stream": { resume_text: "姓名：张三　技能：Python、Redis", jd_text: "后端开发实习生，要求熟悉 Python。" },
+    "/api/v1/interview/question": { resume: '{"name":"张三","skills":["Python"]}', direction: "后端", difficulty: "中级", style: "项目深挖" },
+    "/api/v1/interview/question/stream": { resume: '{"name":"张三"}', direction: "后端", difficulty: "中级", style: "项目深挖" },
+    "/api/v1/interview/chat/stream": { resume: '{"name":"张三","skills":["Python"]}', direction: "后端", difficulty: "中级", style: "项目深挖", session_id: null, message: "", summarize: false },
+    "/api/v1/interview/report": { config: "方向：后端；难度：中级", rounds: "面试官：……\n候选人：……" },
+    "/api/v1/interview/report/stream": { config: "方向：后端", rounds: "面试官：……\n候选人：……" },
+    "/api/v1/report/training": { question: "……", answer: "……", score_summary: "总分 3.4", followup: "" },
+    "/api/v1/report/training/stream": { question: "……", answer: "……", score_summary: "总分 3.4", followup: "" },
+    "/api/v1/report/profile": { knowledge_point: "MySQL 索引", mastery: 0.6, dimension_scores: { 正确性: 3.0, 完整性: 2.8, 表达: 3.5, 术语: 3.6 } },
+    "/api/v1/history": { module: "practice", title: "后端·中级｜示例记录", snapshot: { note: "页面快照" }, session_id: null },
+    "/api/v1/answers/{answer_id}": { is_wrong: true, is_favorite: false },
+    "/api/v1/answers/{answer_id}/review": { quality: 4 },
+    "/api/v1/admin/users/{user_id}": { nickname: "改个名", is_admin: false },
+    "/api/v1/admin/questions": { direction: "后端", difficulty: "中级", question_type: "八股", content: "题干……", reference_answer: "参考答案……", key_points: "考察点" },
+    "/api/v1/admin/questions/{question_id}": { direction: "后端", difficulty: "高级", question_type: "业务", content: "改后的题干……", reference_answer: "", key_points: "" },
+    "/api/v1/admin/config": { values: { retrieval_mode: "hybrid", retrieval_top_k: "8" } },
+  };
+
+  const QUERIES = {
+    "/api/v1/answers": [["only_wrong", "false"], ["only_favorite", "false"], ["limit", "100"]],
+    "/api/v1/answers/due": [["limit", "50"]],
+    "/api/v1/history": [["module", ""]],
+    "/api/v1/admin/users": [["keyword", ""]],
+    "/api/v1/admin/questions": [["keyword", ""], ["direction", ""], ["page", "1"], ["size", "20"]],
+  };
+
+  const UPLOAD = new Set(["/api/v1/resume/parse", "/api/v1/resume/parse/stream"]);
+
+  /* ---------------- 从 openapi.json 生成端点清单 ---------------- */
+  async function loadEndpoints() {
+    // openapi.json 挂在根路径，不在 /api/v1 下，所以不能走 Om.api（它会拼上 /api/v1）
+    const root = String(window.OmReal && OmReal.BASE || "").replace(/\/api\/v1$/, "");
+    const res = await fetch(`${root}/openapi.json`);
+    if (!res.ok) throw new Error(`openapi.json 拉取失败 HTTP ${res.status}`);
+    const spec = await res.json();
+
+    const out = [];
+    Object.entries(spec.paths || {}).forEach(([path, methods]) => {
+      Object.entries(methods).forEach(([method, op]) => {
+        const m = method.toUpperCase();
+        if (!["GET", "POST", "PUT", "PATCH", "DELETE"].includes(m)) return;
+        const tag = (op.tags && op.tags[0]) || "其他";
+        out.push({
+          p: path,
+          m,
+          tag,
+          // summary 是后端每个路由函数的 docstring 首行
+          d: op.summary || op.description || "",
+          sse: path.endsWith("/stream"),
+          up: path.includes("/parse") && m === "POST",
+          admin: path.startsWith("/api/v1/admin"),
+          auth: !path.startsWith("/api/v1/health") && !/\/auth\/(login|register)$/.test(path),
+        });
+      });
+    });
+    // 按 tag 分组顺序稳定下来，方便查找
+    const order = Object.keys(TAGS);
+    out.sort((a, b) => {
+      const ta = order.indexOf(a.tag), tb = order.indexOf(b.tag);
+      return (ta < 0 ? 99 : ta) - (tb < 0 ? 99 : tb) || a.p.localeCompare(b.p);
+    });
+    ENDPOINTS = out;
+  }
+
+  function render() {
+    const kw = filter.kw.toLowerCase();
+    const list = ENDPOINTS.filter((e) => {
+      if (filter.sse && !e.sse) return false;
+      if (filter.m) {
+        if (filter.m === "PATCH/PUT" ? !["PATCH", "PUT"].includes(e.m) : e.m !== filter.m) return false;
+      }
+      if (kw && !(e.p.toLowerCase().includes(kw) || String(e.d).toLowerCase().includes(kw))) return false;
+      return true;
+    });
+
+    $("#cnt-pill").textContent = `${ENDPOINTS.length} 端点 · 当前 ${list.length}`;
+
+    const byTag = {};
+    list.forEach((e) => (byTag[e.tag] = byTag[e.tag] || []).push(e));
+
+    $("#list").innerHTML = Object.keys(byTag).length
+      ? Object.entries(byTag)
+          .map(
+            ([tag, eps]) => `<div class="tagblock">
+              <div class="taghead"><span class="t">${TAGS[tag] || tag}</span><span class="c">${eps.length}</span>
+                <span class="grow"></span><span class="cap mono">tags=["${tag}"]</span></div>
+              ${eps
+                .map(
+                  (e) => `<div class="eprow${cur && cur.p === e.p && cur.m === e.m ? " on" : ""}" data-p="${e.p}" data-m="${e.m}">
+                    <span class="m m-${e.m}">${e.m}</span>
+                    <div>
+                      <div class="p">${e.p}</div>
+                      <div class="cap" style="margin-top:2px">${e.d}</div>
+                    </div>
+                    <div class="flags">
+                      ${e.sse ? '<span class="pill accent">SSE</span>' : ""}
+                      ${e.up ? '<span class="pill info">上传</span>' : ""}
+                      ${e.admin ? '<span class="pill danger">ADMIN</span>' : ""}
+                      ${e.auth ? "" : '<span class="pill">公开</span>'}
+                    </div>
+                  </div>`
+                )
+                .join("")}
+            </div>`
+          )
+          .join("")
+      : `<div class="empty" style="border:0;background:transparent;padding:50px">
+          <div class="glyph">⌗</div><div class="t">没有匹配的端点</div>
+          <div class="d">换个关键词，或清掉筛选条件。</div></div>`;
+  }
+
+  $("#kw").addEventListener("input", (e) => { filter.kw = e.target.value.trim(); render(); });
+  Om.seg($("#meth"), (v) => { filter.m = v; render(); });
+  $("#only-sse").addEventListener("change", (e) => { filter.sse = e.target.checked; render(); });
+
+  /* ---------------- 选中端点 ---------------- */
+  $("#list").addEventListener("click", (e) => {
+    const el = e.target.closest(".eprow");
+    if (!el) return;
+    cur = ENDPOINTS.find((x) => x.p === el.dataset.p && x.m === el.dataset.m);
+    render();
+    loadEndpoint();
+  });
+
+  function loadEndpoint() {
+    if (!cur) return;
+    $("#dbg-m").className = `m m-${cur.m}`;
+    $("#dbg-m").textContent = cur.m;
+    $("#dbg-url").textContent = cur.p;
+    $("#dbg-desc").textContent = cur.d;
+    $("#dbg-auth").innerHTML = cur.admin
+      ? '<span class="dot warn"></span>需要管理员'
+      : cur.auth ? '<span class="dot done"></span>需要 Bearer' : '<span class="dot"></span>公开端点';
+    $("#dbg-auth").className = "pill mono";
+    $("#out").textContent = "// 点「发送请求」查看响应";
+    $("#resp-pill").textContent = "等待发送";
+    $("#statusline").innerHTML = `<span class="code">—</span><span>未发送</span>`;
+    $("#dbg-time").textContent = "—";
+    renderTab();
+  }
+
+  $("#dbgtabs").addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    tab = b.dataset.v;
+    $("#dbgtabs").querySelectorAll("button").forEach((x) => x.setAttribute("aria-selected", String(x === b)));
+    renderTab();
+  });
+
+  function renderTab() {
+    ["params", "body", "headers"].forEach((t) => ($("#pane-" + t).style.display = t === tab ? "" : "none"));
+
+    if (tab === "params") {
+      if (!cur) return ($("#pane-params").innerHTML = `<p class="hint">未选择端点。</p>`);
+      const q = QUERIES[cur.p] || [];
+      const pathVars = (cur.p.match(/\{[^}]+\}/g) || []);
+      if (!q.length && !pathVars.length) return ($("#pane-params").innerHTML = `<p class="hint">此端点没有路径参数与查询参数。</p>`);
+      $("#pane-params").innerHTML = `
+        ${pathVars
+          .map((v) => {
+            const key = v.slice(1, -1);
+            const dv = key === "key" ? "retrieval_mode" : "1";
+            return `<div class="kvrow"><span class="k"><b>path</b> ${v}</span>
+              <input class="input mono" data-pp="${key}" value="${dv}" /></div>`;
+          })
+          .join("")}
+        ${q
+          .map(
+            ([k, v]) => `<div class="kvrow"><span class="k"><b>query</b> ${k}</span>
+              <input class="input mono" data-q="${k}" value="${v}" placeholder="留空则不发送" /></div>`
+          )
+          .join("")}`;
+    }
+
+    if (tab === "body") {
+      if (!cur) return ($("#pane-body").innerHTML = `<p class="hint">未选择端点。</p>`);
+      if (UPLOAD.has(cur.p))
+        return ($("#pane-body").innerHTML = `
+          <div class="drop" style="padding:18px">
+            <div class="drop-ico">⇪</div>
+            <div style="font-size:13px;font-weight:540">multipart/form-data</div>
+            <div class="hint mt-1">字段名 <code class="mono">file</code> · 调试台不发真实文件，请在简历页上传</div>
+          </div>`);
+      if (["GET", "DELETE"].includes(cur.m) && !BODIES[cur.p])
+        return ($("#pane-body").innerHTML = `<p class="hint">${cur.m} 请求不带请求体。</p>`);
+      const body = BODIES[cur.p];
+      $("#pane-body").innerHTML = body
+        ? `<textarea class="textarea mono" id="bodytext" style="min-height:200px;font-size:11.5px">${JSON.stringify(body, null, 2)}</textarea>`
+        : `<p class="hint">此端点无预置示例请求体。可自行填写 JSON。</p>
+           <textarea class="textarea mono" id="bodytext" style="min-height:140px;font-size:11.5px">{}</textarea>`;
+    }
+
+    if (tab === "headers") {
+      $("#pane-headers").innerHTML = `
+        <div class="kvrow"><span class="k">Content-Type</span>
+          <input class="input mono" value="${UPLOAD.has(cur?.p) ? "multipart/form-data; boundary=..." : "application/json"}" disabled /></div>
+        <div class="kvrow"><span class="k">Authorization</span>
+          <input class="input mono" value="Bearer ${Om.auth.token ? Om.auth.token.slice(0, 18) + "…" : "（未登录）"}" disabled /></div>
+        <div class="kvrow"><span class="k">Accept</span>
+          <input class="input mono" value="${cur?.sse ? "text/event-stream" : "application/json"}" disabled /></div>
+        <p class="hint mt-2">跨域由后端 CORSMiddleware 放行（正则匹配 localhost / 127.0.0.1 任意端口）。</p>`;
+    }
+  }
+
+  /* ---------------- 发送（真实请求） ---------------- */
+  $("#btn-send").addEventListener("click", async () => {
+    if (!cur) return Om.toast("err", "未选择端点", "先点左侧清单里的一条端点。");
+    const t0 = performance.now();
+    $("#resp-pill").textContent = "请求中…";
+    $("#statusline").innerHTML = `<span class="code">…</span><span>请求中</span>`;
+
+    // 组装路径：替换路径参数 + 拼查询串
+    let path = cur.p;
+    $("#pane-params").querySelectorAll("[data-pp]").forEach((i) => {
+      path = path.replace(new RegExp(`\\{${i.dataset.pp}\\}`), encodeURIComponent(i.value || "1"));
+    });
+    const qs = [];
+    $("#pane-params").querySelectorAll("[data-q]").forEach((i) => {
+      if (i.value !== "") qs.push(`${i.dataset.q}=${encodeURIComponent(i.value)}`);
+    });
+    if (qs.length) path += "?" + qs.join("&");
+
+    if (UPLOAD.has(cur.p)) {
+      const ms = Math.round(performance.now() - t0);
+      $("#dbg-time").textContent = `${ms} ms`;
+      $("#statusline").innerHTML = `<span class="code">—</span><span>需要真实文件，调试台跳过</span>`;
+      $("#resp-pill").textContent = "跳过";
+      $("#resp-pill").className = "pill";
+      $("#out").innerHTML = syntax({ detail: "这是 multipart 上传端点，调试台不发真实文件。请到「简历诊断」页上传 PDF 验证。" });
+      return;
+    }
+
+    let body;
+    const raw = $("#bodytext") ? $("#bodytext").value.trim() : "";
+    if (raw && !["GET", "DELETE"].includes(cur.m)) {
+      try {
+        body = JSON.parse(raw);
+      } catch (ex) {
+        $("#statusline").innerHTML = `<span class="code err">JSON 解析失败</span><span>${ex.message}</span>`;
+        $("#resp-pill").textContent = "失败";
+        $("#resp-pill").className = "pill danger";
+        return;
+      }
+    }
+
+    try {
+      if (cur.sse) {
+        // 流式端点：收集前若干条事件展示，不阻塞在 [DONE] 上
+        const events = [];
+        await new Promise((resolve) => {
+          Om.sse(path, {
+            body,
+            onEvent: (ev) => {
+              events.push(ev);
+              if (events.length >= 12) resolve();
+            },
+            onDone: resolve,
+            onError: (ev) => { events.push(ev); resolve(); },
+          });
+          // 兜底：10 秒没结果也收尾，避免调试台卡住
+          setTimeout(resolve, 10000);
+        });
+        const ms = Math.round(performance.now() - t0);
+        $("#dbg-time").textContent = `${ms} ms`;
+        $("#statusline").innerHTML = `<span class="code ok">SSE 流</span><span>${ms} ms</span><span style="margin-left:auto;color:var(--faint)">text/event-stream</span>`;
+        $("#resp-pill").textContent = "成功";
+        $("#resp-pill").className = "pill success";
+        $("#out").innerHTML = syntax({
+          _content_type: "text/event-stream",
+          _note: "流式端点：响应体是一串 data: 行，每行一个 step event，末尾 data: [DONE]",
+          received: events.length,
+          events: events.slice(0, 8),
+        });
+        Om.toast("ok", "流式已连通", `${cur.m} ${cur.p} · 收到 ${events.length} 条事件 · ${ms} ms`);
+        return;
+      }
+
+      const payload = await Om.api(cur.m, path, body);
+      const ms = Math.round(performance.now() - t0);
+      $("#dbg-time").textContent = `${ms} ms`;
+      $("#statusline").innerHTML = `<span class="code ok">HTTP 200 OK</span><span>${ms} ms</span><span style="margin-left:auto;color:var(--faint)">application/json</span>`;
+      $("#resp-pill").textContent = "成功";
+      $("#resp-pill").className = "pill success";
+      $("#out").innerHTML = syntax(payload);
+      Om.toast("ok", "请求完成", `${cur.m} ${cur.p} · ${ms} ms`);
+    } catch (ex) {
+      const ms = Math.round(performance.now() - t0);
+      const status = ex.status || 0;
+      $("#dbg-time").textContent = `${ms} ms`;
+      $("#statusline").innerHTML = `<span class="code err">HTTP ${status || "ERR"}</span><span>${ms} ms</span>`;
+      $("#resp-pill").textContent = "失败";
+      $("#resp-pill").className = "pill danger";
+      $("#out").innerHTML = syntax(ex.data || { detail: ex.message });
+      Om.toast("err", status ? `HTTP ${status}` : "请求失败", ex.message || String(ex));
+    }
+  });
+
+  function syntax(o) {
+    const s = JSON.stringify(o, null, 2)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return s
+      .replace(/"([^"]+)":/g, '<span class="k">"$1"</span>:')
+      .replace(/: "([^"]*)"/g, ': <span class="s">"$1"</span>')
+      .replace(/: (true|false|null)/g, ': <span class="b">$1</span>')
+      .replace(/: (-?\d+\.?\d*)/g, ': <span class="n">$1</span>');
+  }
+
+  /* ---------------- 健康检查 ---------------- */
+  $("#btn-health").addEventListener("click", async () => {
+    const t0 = performance.now();
+    try {
+      const h = await Om.api("GET", "/api/v1/health");
+      const r = await Om.api("GET", "/api/v1/health/ready");
+      const ms = Math.round(performance.now() - t0);
+      cur = ENDPOINTS.find((e) => e.p === "/api/v1/health/ready") || cur;
+      render();
+      if (cur) loadEndpoint();
+      $("#out").innerHTML = syntax({ ...r, _probe_health: h });
+      $("#statusline").innerHTML = `<span class="code ok">HTTP 200 OK</span><span>${ms} ms</span><span style="margin-left:auto;color:var(--faint)">application/json</span>`;
+      $("#resp-pill").textContent = "成功";
+      $("#resp-pill").className = "pill success";
+      $("#dbg-time").textContent = `${ms} ms`;
+      Om.toast("ok", "服务健康", "postgres / redis / qdrant 与本地模型状态见响应体");
+    } catch (ex) {
+      Om.toast("err", "健康检查失败", ex.message || String(ex));
+    }
+  });
+
+  try {
+    await loadEndpoints();
+    render();
+  } catch (ex) {
+    $("#cnt-pill").textContent = "端点清单加载失败";
+    $("#list").innerHTML = `<div class="empty" style="border:0;background:transparent;padding:50px">
+      <div class="t">拉不到 /openapi.json</div>
+      <div class="d">${ex.message || ex}。确认后端已在 :8000 运行。</div></div>`;
+  }
+})().catch((e) => Om.toast("err", "页面初始化失败", e.message || String(e)));
+</script>
+</body>
+</html>

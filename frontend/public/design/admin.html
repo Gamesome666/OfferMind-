@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>后台概览 · OfferMind</title>
+<link rel="stylesheet" href="assets/tokens.css" />
+<style>
+  .tblcard { overflow: hidden; }
+  .toolbar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .search { position: relative; }
+  .search .input { width: 268px; padding-left: 30px; }
+  .search::before { content: "⌕"; position: absolute; left: 10px; top: 7px; color: var(--faint); font-size: 14px; }
+  .avatar {
+    width: 28px; height: 28px; border-radius: var(--r-sm); display: grid; place-items: center;
+    background: var(--brand-soft); color: var(--brand); font-size: 12px; font-weight: 600; flex-shrink: 0;
+  }
+  .u { display: flex; align-items: center; gap: 10px; }
+  .u .nm { font-size: 13px; font-weight: 520; }
+  .u .em { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+  .rowacts { display: flex; gap: 6px; justify-content: flex-end; }
+  .self-tag { font-family: var(--font-mono); font-size: 10px; color: var(--accent-ink); }
+
+  .dist { display: grid; gap: 9px; }
+  .dist .d { display: grid; grid-template-columns: 62px minmax(0,1fr) 34px; gap: 10px; align-items: center; font-size: 12.5px; }
+  .dist .d .p { font-family: var(--font-mono); text-align: right; color: var(--muted); font-size: 11.5px; }
+
+  .quick-links { display: grid; gap: 8px; }
+  .quick-links a {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    border: 1px solid var(--border); border-radius: var(--r-sm); font-size: 13px;
+    transition: border-color .13s, transform .12s;
+  }
+  .quick-links a:hover { border-color: var(--accent-line); transform: translateX(2px); }
+  .quick-links .ic { font-family: var(--font-mono); font-size: 14px; color: var(--accent-ink); width: 18px; }
+  .quick-links .d { font-size: 11.5px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div id="rail-slot"></div>
+
+  <main class="main">
+    <div class="page">
+
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Admin · 用户与系统概览</div>
+          <div class="title-row" style="margin-top:7px">
+            <h1 class="h1">后台概览</h1>
+            <span class="pill accent">管理员</span>
+            <span class="pill danger">非管理员一律 403</span>
+          </div>
+          <p class="lead" style="margin-top:8px;font-size:14px">
+            用户管理不能取消或删除自己 —— 后端在 <code>update_user</code> / <code>delete_user</code> 里直接拦截，
+            不依赖前端禁用按钮。
+          </p>
+        </div>
+        <div class="actions">
+          <a class="btn" href="admin-questions.html">题库管理</a>
+          <a class="btn" href="admin-config.html">模型与检索</a>
+          <a class="btn btn-primary" href="admin-api.html">接口总览</a>
+        </div>
+      </div>
+
+      <div class="grid g-4">
+        <div class="stat"><div class="k">注册用户</div><div class="v" id="k-u">—</div><div class="sub">全部已注册账号</div></div>
+        <div class="stat"><div class="k">题库题目</div><div class="v" id="k-q">—</div><div class="sub">跨用户复用的公共题</div></div>
+        <div class="stat"><div class="k">管理员</div><div class="v" id="k-adm">—</div><div class="sub">可访问后台</div></div>
+        <div class="stat accent"><div class="k">本周新增</div><div class="v" id="k-new">—</div><div class="sub">近 7 天注册</div></div>
+      </div>
+
+      <div class="grid g-main-side mt-5">
+
+        <!-- ===== 用户管理 ===== -->
+        <section class="card tblcard" data-od-id="admin-card-01">
+          <div class="toolbar">
+            <div class="h3">用户管理</div>
+            <div class="search" style="margin-left:auto">
+              <input class="input" id="kw" placeholder="按邮箱或昵称搜索" />
+            </div>
+            <span class="small" id="ep">按邮箱或昵称搜索</span>
+          </div>
+          <div class="table-wrap" style="max-height:none">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th style="width:56px">ID</th>
+                  <th>用户</th>
+                  <th style="width:112px">注册时间</th>
+                  <th style="width:96px">角色</th>
+                  <th style="width:230px;text-align:right">操作</th>
+                </tr>
+              </thead>
+              <tbody id="users"></tbody>
+            </table>
+          </div>
+          <div class="card-foot">
+            <span class="small" id="u-count">—</span>
+            <span class="small">重置后密码立即生效，旧密码不可再用</span>
+          </div>
+        </section>
+
+        <!-- ===== 右列 ===== -->
+        <div class="stack">
+          <section class="card" data-od-id="admin-card-02">
+            <div class="card-head"><div class="h3">题库方向分布</div><span class="pill" id="d-n">—</span></div>
+            <div class="card-body"><div class="dist" id="dist"></div></div>
+          </section>
+
+          <section class="card" data-od-id="admin-card-03">
+            <div class="card-head"><div class="h3">管理入口</div></div>
+            <div class="card-body">
+              <div class="quick-links">
+                <a href="admin-questions.html"><span class="ic">▤</span><span class="grow"><span>题库管理</span><span class="d" style="display:block">分页 / 检索 / 增删改，同步 Qdrant</span></span><span>→</span></a>
+                <a href="admin-config.html"><span class="ic">⚙</span><span class="grow"><span>模型与检索配置</span><span class="d" style="display:block">端点 / 模型 / 检索模式 / 网关路由</span></span><span>→</span></a>
+                <a href="admin-api.html"><span class="ic">⌗</span><span class="grow"><span>接口总览与调试</span><span class="d" style="display:block">47 个端点分组清单</span></span><span>→</span></a>
+                <a href="bigscreen.html"><span class="ic">▣</span><span class="grow"><span>数据大屏</span><span class="d" style="display:block">演示与监控用作战室</span></span><span>→</span></a>
+              </div>
+            </div>
+          </section>
+
+          <section class="card" data-od-id="admin-card-04">
+            <div class="card-head"><div class="h3">高危操作护栏</div></div>
+            <div class="card-body">
+              <ul class="stack-sm" style="font-size:12.5px;color:var(--fg-2)">
+                <li>— 不能取消自己的管理员权限（400）</li>
+                <li>— 不能删除自己的账号（400）</li>
+                <li>— 删用户不级联删作答记录，保留数据飞轮样本</li>
+                <li>— 删题目必须同步删向量库，否则检索命中旧题</li>
+              </ul>
+            </div>
+          </section>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="assets/app.js"></script>
+<script src="assets/api-real.js"></script>
+<script>
+(async function () {
+  Om.mount("admin");
+  const $ = (s) => document.querySelector(s);
+  /** 当前登录用户 id —— 从 /auth/me 拿，用来禁用「取消自己管理员」「删除自己」 */
+  let ME = null;
+  try {
+    ME = (await Om.api("GET", "/api/v1/auth/me")).id;
+  } catch {
+    /* 拿不到就退化成「全部可操作」，后端仍会拦 */
+  }
+
+  async function load(kw) {
+    try {
+      // GET /api/v1/admin/stats —— 概览卡片 + 方向分布一次拿全
+      const st = await Om.api("GET", "/api/v1/admin/stats");
+      $("#k-u").innerHTML = `${st.users}<small>人</small>`;
+      $("#k-q").innerHTML = `${st.questions}<small>题</small>`;
+      $("#k-adm").innerHTML = `${st.admins}<small>人</small>`;
+      $("#k-new").innerHTML = `${st.new_users_7d}<small>人</small>`;
+
+      const byDir = st.directions || {};
+      const dirs = Object.entries(byDir).sort((a, b) => b[1] - a[1]);
+      const total = dirs.reduce((n, [, v]) => n + v, 0) || 1;
+      $("#d-n").textContent = `${dirs.length} 个方向 · ${total} 题`;
+      $("#dist").innerHTML = dirs.length
+        ? dirs
+            .map(([d, n]) => {
+              const p = Math.round((n / total) * 100);
+              return `<div class="d"><span>${d}</span><span class="bar"><i style="width:${p}%"></i></span><span class="p">${n}</span></div>`;
+            })
+            .join("")
+        : `<div class="empty" style="border:0;background:transparent"><div class="d">题库为空。</div></div>`;
+
+      // GET /api/v1/admin/users
+      const users = await Om.api("GET", `/api/v1/admin/users?keyword=${encodeURIComponent(kw || "")}`);
+      $("#ep").textContent = kw ? `匹配「${kw}」` : "按邮箱或昵称搜索";
+      $("#u-count").textContent = `共 ${users.length} 条记录`;
+      $("#users").innerHTML = users.length
+        ? users
+            .map((u) => {
+              const self = ME != null && u.id === ME;
+              const name = u.nickname || u.email;
+              return `<tr data-id="${u.id}">
+          <td class="col-num" style="text-align:left">${u.id}</td>
+          <td>
+            <div class="u">
+              <span class="avatar">${String(name).slice(0, 1)}</span>
+              <span>
+                <span class="nm">${name} ${self ? '<span class="self-tag">（我）</span>' : ""}</span>
+                <span class="em" style="display:block">${u.email}</span>
+              </span>
+            </div>
+          </td>
+          <td class="mono" style="font-size:11.5px;color:var(--muted)">${String(u.created_at).slice(0, 10)}</td>
+          <td>${u.is_admin ? '<span class="pill accent">管理员</span>' : '<span class="pill">普通用户</span>'}</td>
+          <td>
+            <div class="rowacts">
+              <button class="btn btn-sm" data-act="role" ${self ? "disabled title='不能取消自己的管理员权限'" : ""}>
+                ${u.is_admin ? "取消管理员" : "设为管理员"}
+              </button>
+              <button class="btn btn-sm" data-act="pwd">重置密码</button>
+              <button class="btn btn-sm btn-danger" data-act="del" ${self ? "disabled title='不能删除自己'" : ""}>删除</button>
+            </div>
+          </td>
+        </tr>`;
+            })
+            .join("")
+        : `<tr><td colspan="5" class="empty">没有匹配的用户</td></tr>`;
+    } catch (ex) {
+      // 非管理员会拿到 403，接入层已把后端的中文 detail 带出来
+      Om.toast("err", "后台数据加载失败", ex.message || String(ex));
+    }
+  }
+
+  let kwTimer = null;
+  $("#kw").addEventListener("input", (e) => {
+    const v = e.target.value.trim();
+    clearTimeout(kwTimer);
+    kwTimer = setTimeout(() => load(v), 250);
+  });
+
+  $("#users").addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-act]");
+    if (!btn || btn.disabled) return;
+    const id = Number(btn.closest("tr").dataset.id);
+    const act = btn.dataset.act;
+    // 每次操作都从列表里取最新的那一行，避免用陈旧快照
+    const users = await Om.api("GET", `/api/v1/admin/users?keyword=${encodeURIComponent($("#kw").value.trim())}`);
+    const u = users.find((x) => x.id === id);
+    if (!u) return;
+    const name = u.nickname || u.email;
+
+    try {
+      if (act === "role") {
+        const next = !u.is_admin;
+        const ok = await Om.confirm({
+          title: next ? "设为管理员" : "取消管理员权限",
+          msg: next
+            ? `将 ${name}（${u.email}）提升为管理员，可访问全部后台功能。`
+            : `将撤销 ${name} 的管理员权限，其会话将失去后台访问权限。`,
+          ok: next ? "确认提升" : "确认撤销",
+          danger: !next,
+        });
+        if (!ok) return;
+        await Om.api("PATCH", `/api/v1/admin/users/${id}`, { is_admin: next });
+        await load($("#kw").value.trim());
+        Om.toast("ok", "角色已更新", `${name} → ${next ? "管理员" : "普通用户"}`);
+      }
+
+      if (act === "pwd") {
+        const m = Om.modal({
+          title: `重置 ${name} 的密码`,
+          body: `<div class="field">
+              <label class="label" for="np">新密码 <span class="req">*</span></label>
+              <input class="input mono" id="np" type="text" value="offermind2026" />
+              <span class="hint">后端会用 bcrypt 重新哈希；返回体不回显密码。</span>
+            </div>`,
+          foot: `<button class="btn" data-close>取消</button><button class="btn btn-primary" data-ok>重置</button>`,
+        });
+        m.el.querySelector("[data-ok]").addEventListener("click", async () => {
+          const v = m.el.querySelector("#np").value;
+          if (v.length < 6) return Om.toast("err", "密码太短", "长度需在 6–64 位之间。");
+          try {
+            await Om.api("PATCH", `/api/v1/admin/users/${id}`, { password: v });
+            m.close();
+            Om.toast("ok", "密码已重置", `${u.email} 需用新密码登录`);
+          } catch (ex) {
+            Om.toast("err", "重置失败", ex.message || String(ex));
+          }
+        });
+      }
+
+      if (act === "del") {
+        const ok = await Om.confirm({
+          title: "删除用户",
+          msg: `将永久删除 ${name}（${u.email}）。`,
+          detail: `<div class="note bad" style="border:1px solid var(--danger-soft);background:var(--danger-soft);padding:10px 12px;border-radius:6px;font-size:12.5px">
+            该操作不可撤销。作答记录会被保留（LoRA 微调数据集依赖它），但用户将无法再登录。</div>`,
+          ok: "永久删除",
+          danger: true,
+        });
+        if (!ok) return;
+        await Om.api("DELETE", `/api/v1/admin/users/${id}`);
+        await load($("#kw").value.trim());
+        Om.toast("ok", "用户已删除", `${u.email} 已从用户表移除`);
+      }
+    } catch (ex) {
+      Om.toast("err", "操作失败", ex.message || String(ex));
+    }
+  });
+
+  await load("");
+})().catch((e) => Om.toast("err", "页面初始化失败", e.message || String(e)));
+</script>
+</body>
+</html>

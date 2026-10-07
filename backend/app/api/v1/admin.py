@@ -205,10 +205,21 @@ async def stats(
     _: User = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    """后台首页概览：用户数、题目数。"""
+    """后台首页概览。
+
+    把概览卡片要的数字一次给全（用户数/题量/管理员数/近 7 天新增/方向分布），
+    否则前端为了画一个分布图得把整个题库拉下来自己数。
+    """
+    from datetime import datetime, timedelta
+
     return {
         "users": await user_repo.count(db),
         "questions": await question_repo.count(db),
+        "admins": await user_repo.count_admins(db),
+        "new_users_7d": await user_repo.count_created_since(
+            db, datetime.now() - timedelta(days=7)
+        ),
+        "directions": await question_repo.count_by_direction(db),
     }
 
 
@@ -281,6 +292,41 @@ async def update_config(
             continue
         await config_repo.set(db, key, value)
     return await settings_service.snapshot(db)
+
+
+@router.get("/llm/options")
+async def llm_options(
+    _: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """「模型接入」配置页要的两个东西：服务商预置 + 端点的实时模型列表。
+
+    拉实时列表失败不算错误（端点不支持 /models、网络不通、密钥无效都可能），
+    降级成静态候选并把原因带回去，页面照常可用。
+    """
+    from app.agent.llm import list_models
+
+    base_url = await settings_service.effective(db, "llm_base_url")
+    api_key = await settings_service.effective(db, "llm_api_key")
+
+    models: list[str] = []
+    error = ""
+    try:
+        models = await list_models(base_url, api_key)
+    except Exception as exc:  # noqa: BLE001 —— 拉取失败降级即可，不该让配置页打不开
+        error = f"{type(exc).__name__}: {str(exc)[:120]}"
+
+    source = "live" if models else "fallback"
+    if not models:
+        models = list(settings_service.model_options())
+
+    return {
+        "presets": list(settings_service.all_presets()),
+        "source": source,
+        "models": models,
+        "error": error,
+        "base_url": base_url,
+    }
 
 
 @router.delete("/config/{key}")
