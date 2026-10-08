@@ -37,3 +37,4 @@ frontend/tsconfig.tsbuildinfo
 
 # 文档构建中间产物
 .staging/
+frontend/next.log
