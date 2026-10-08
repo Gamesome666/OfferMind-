@@ -31,3 +31,9 @@ backend/benchmark/
 # 工具产物
 .playwright-mcp/
 .claude/settings.local.json
+
+# TS 增量构建产物
+frontend/tsconfig.tsbuildinfo
+
+# 文档构建中间产物
+.staging/

@@ -1,160 +1,284 @@
 "use client";
 
+/** 登录 / 注册。对应设计稿 login.html。 */
+
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { useAuth } from "@/lib/auth";
+import { useToast } from "@/components/ToastProvider";
+
+import "./login.css";
+
+const DEMO_EMAIL = "admin@offermind.dev";
+const DEMO_PASSWORD = "admin123456";
+
+type Mode = "login" | "register";
 
 export default function LoginPage() {
   const { user, ready, signIn, signUp } = useAuth();
+  const toast = useToast();
   const router = useRouter();
 
-  const [mode, setMode] = useState<"login" | "register">("login");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [mode, setMode] = useState<Mode>("login");
+  const [email, setEmail] = useState(DEMO_EMAIL);
+  const [password, setPassword] = useState(DEMO_PASSWORD);
   const [nickname, setNickname] = useState("");
   const [error, setError] = useState("");
+  const [pwHint, setPwHint] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  // 已登录就直接进工作台，避免停在登录页
   useEffect(() => {
-    if (ready && user) router.replace("/");
+    if (ready && user) router.replace("/dashboard");
   }, [ready, user, router]);
 
-  async function submit(e: React.FormEvent) {
+  function switchMode(next: Mode) {
+    setMode(next);
+    setError("");
+    setPwHint(false);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setPwHint(false);
+
+    const mail = email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) {
+      setError("邮箱格式不正确");
+      return;
+    }
+    if (password.length < 6 || password.length > 64) {
+      setPwHint(true);
+      setError("密码长度需在 6–64 位之间");
+      return;
+    }
+
     setBusy(true);
     try {
-      if (mode === "login") {
-        await signIn(email, password);
+      if (mode === "register") {
+        await signUp(mail, password, nickname.trim());
       } else {
-        await signUp(email, password, nickname);
+        await signIn(mail, password);
       }
-      router.replace("/");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "操作失败，请重试");
-    } finally {
+      toast("ok", "登录成功", "已签发 JWT，正在进入工作台");
+      router.replace("/dashboard");
+    } catch (ex) {
+      // 后端的 detail 就是中文提示（如「邮箱或密码错误」）
+      setError(ex instanceof Error ? ex.message : "登录失败");
       setBusy(false);
     }
   }
 
   return (
-    <div className="auth-wrap">
-      <aside className="auth-aside">
-        <div>
-          <h2>把每一次面试，练到有据可依。</h2>
+    // data-page 是页面私有样式的**作用域挂载点**：页面 CSS 全部写成
+    // `[data-page="login"] .xxx`，所以它必须包在外面，不能和 `.auth` 是同一个元素。
+    <div data-page="login">
+      <div className="auth">
+      {/* ---------------- 左：品牌面 ---------------- */}
+      <section className="brandside">
+        <Link className="bs-brand" href="/">
+          <span className="m">OfferMind</span>
+          <span className="t">v0.9</span>
+        </Link>
+
+        <div className="bs-mid">
+          <div className="eyebrow">Observable Agentic RAG</div>
+          <h1>
+            你的每一次作答，
+            <br />
+            都被 Agent <em>逐步评价</em>。
+          </h1>
           <p>
-            出题、评分、追问由 Agent 完成，每一步的工具调用、知识检索与模型推理都实时可见。
-            不是给你一个分数，而是让你看清分数是怎么来的。
+            不是给一个分数就结束。从查询向量化、混合召回、精排，到四维 rubric 的每一维理由与改进建议
+            —— 这套系统把中间过程全部留在屏幕上。
           </p>
+
+          <div className="mini">
+            <div className="mini-h">
+              <span className="eyebrow">Agent Trace</span>
+              <span className="live">
+                <span className="dot done" />
+                idle
+              </span>
+            </div>
+            <div className="mini-b">
+              <div className="mini-r">
+                <span className="k">检索</span>
+                <span className="v">
+                  embed:q <b>BGE-M3</b> dim=1024
+                </span>
+                <span className="ms">63 ms</span>
+              </div>
+              <div className="mini-r">
+                <span className="k">检索</span>
+                <span className="v">
+                  recall:q mode=<b>hybrid</b> cand=20
+                </span>
+                <span className="ms">41 ms</span>
+              </div>
+              <div className="mini-r">
+                <span className="k">检索</span>
+                <span className="v">
+                  rerank:q keep=<b>5</b>
+                </span>
+                <span className="ms">188 ms</span>
+              </div>
+              <div className="mini-r">
+                <span className="k">模型</span>
+                <span className="v">
+                  grade total=<b>3.4</b>
+                </span>
+                <span className="ms">4180 ms</span>
+              </div>
+              <div className="mini-r">
+                <span className="k">记忆</span>
+                <span className="v">
+                  profile.write <b>MySQL 索引</b>
+                </span>
+                <span className="ms">22 ms</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="auth-traces">
+        <div className="bs-foot">
           <div>
-            <b>检索</b> question_bank · top-k 5 · 命中 5
+            <b>6</b>个训练模块
           </div>
           <div>
-            <b>模型</b> deepseek-chat · 结构化输出
+            <b>4</b>维评分 rubric
           </div>
           <div>
-            <b>评分</b> 正确性 4/5 · 完整性 3/5 · 表达 4/5
+            <b>SM-2</b>间隔重复
           </div>
           <div>
-            <b>追问</b> 针对「红黑树触发条件」继续深挖
+            <b>全链路</b>流式可见
           </div>
         </div>
+      </section>
 
-        <p style={{ fontSize: 12, color: "var(--rail-ink-dim)" }}>
-          OfferMind · 可观测 Agentic RAG 驱动
-        </p>
-      </aside>
+      {/* ---------------- 右：表单 ---------------- */}
+      <section className="formside">
+        <div className="fbox">
+          <div className="ftabs" role="tablist">
+            <button
+              role="tab"
+              aria-selected={mode === "login"}
+              onClick={() => switchMode("login")}
+              type="button"
+            >
+              登录
+            </button>
+            <button
+              role="tab"
+              aria-selected={mode === "register"}
+              onClick={() => switchMode("register")}
+              type="button"
+            >
+              注册
+            </button>
+          </div>
 
-      <main className="auth-form">
-        <div className="seg" style={{ marginBottom: 22 }}>
-          <button
-            type="button"
-            className={mode === "login" ? "on" : ""}
-            onClick={() => {
-              setMode("login");
-              setError("");
-            }}
-          >
-            登录
-          </button>
-          <button
-            type="button"
-            className={mode === "register" ? "on" : ""}
-            onClick={() => {
-              setMode("register");
-              setError("");
-            }}
-          >
-            注册
-          </button>
-        </div>
+          <div className={`ferr${error ? " on" : ""}`}>
+            <span>⚠</span>
+            <span>{error}</span>
+          </div>
 
-        <h1 style={{ fontSize: 20, marginBottom: 6 }}>
-          {mode === "login" ? "欢迎回来" : "创建账号"}
-        </h1>
-        <p className="muted" style={{ marginBottom: 22 }}>
-          {mode === "login" ? "继续你的训练进度。" : "注册后即可开始定向刷题与模拟面试。"}
-        </p>
+          <form onSubmit={handleSubmit} noValidate>
+            {mode === "register" && (
+              <div className="field">
+                <label className="label" htmlFor="nickname">
+                  昵称
+                </label>
+                <input
+                  className="input"
+                  id="nickname"
+                  autoComplete="nickname"
+                  placeholder="用于侧栏与报告展示"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                />
+              </div>
+            )}
 
-        <form onSubmit={submit}>
-          {mode === "register" && (
             <div className="field">
-              <label htmlFor="nickname">昵称</label>
+              <label className="label" htmlFor="email">
+                邮箱 <span className="req">*</span>
+              </label>
               <input
-                id="nickname"
                 className="input"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                placeholder="怎么称呼你"
-                autoComplete="nickname"
+                id="email"
+                type="email"
+                autoComplete="username"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
-          )}
 
-          <div className="field">
-            <label htmlFor="email">邮箱</label>
-            <input
-              id="email"
-              className="input"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              autoComplete="email"
-            />
-          </div>
-
-          <div className="field">
-            <label htmlFor="password">密码</label>
-            <input
-              id="password"
-              className="input"
-              type="password"
-              required
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder={mode === "register" ? "至少 6 位" : "输入密码"}
-              autoComplete={mode === "login" ? "current-password" : "new-password"}
-            />
-          </div>
-
-          {error && (
-            <div className="alert alert-bad" style={{ marginBottom: 14 }}>
-              {error}
+            <div className="field">
+              <label className="label" htmlFor="password">
+                密码 <span className="req">*</span>
+              </label>
+              <input
+                className="input"
+                id="password"
+                type="password"
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
+                placeholder="至少 6 位"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              {pwHint && <span className="hint">密码长度需在 6–64 位之间。</span>}
             </div>
-          )}
 
-          <button className="btn btn-primary" type="submit" disabled={busy} style={{ width: "100%" }}>
-            {busy ? "处理中…" : mode === "login" ? "登录" : "注册并登录"}
-          </button>
-        </form>
-      </main>
+            {mode === "login" && (
+              <div className="fmeta">
+                <label className="check">
+                  <input type="checkbox" defaultChecked /> <span>保持登录状态</span>
+                </label>
+                <a href="#" className="small" style={{ color: "var(--accent-ink)" }}>
+                  忘记密码？
+                </a>
+              </div>
+            )}
+
+            <button
+              className="btn btn-primary btn-block btn-lg fgap"
+              type="submit"
+              disabled={busy}
+            >
+              {busy ? (mode === "login" ? "正在登录…" : "正在创建…") : mode === "login" ? "登录" : "创建账号"}
+            </button>
+          </form>
+
+          <div className="fdemo">
+            <div className="k">演示账号</div>
+            <div className="v">
+              {DEMO_EMAIL} · {DEMO_PASSWORD}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setEmail(DEMO_EMAIL);
+                setPassword(DEMO_PASSWORD);
+                setMode("login");
+                setError("");
+              }}
+            >
+              一键填入
+            </button>
+          </div>
+
+          <p className="hint" style={{ marginTop: 22 }}>
+            你的简历、作答与报告只对自己可见 —— 换一个账号登录，看不到任何属于他人的记录。
+          </p>
+        </div>
+      </section>
+      </div>
     </div>
   );
 }

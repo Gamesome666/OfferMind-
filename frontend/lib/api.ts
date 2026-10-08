@@ -158,6 +158,17 @@ export function updateProfile(
   );
 }
 
+/** 能力画像条目：工作台的雷达图与「最该补的短板」都从这里来。 */
+export type ProfileItem = {
+  knowledge_point: string;
+  mastery: number;
+  dimension_scores: Record<string, number>;
+};
+
+export function getProfile(token: string) {
+  return request<ProfileItem[]>("/report/profile", {}, token);
+}
+
 /* ---------- SSE 流式 ---------- */
 
 export async function* stream(
@@ -209,6 +220,35 @@ export async function* stream(
       }
     }
   }
+}
+
+/**
+ * 把一条流式链路跑完，返回最终「结果」事件的 payload。
+ *
+ * `stream()` 是异步生成器，适合"边推边渲染"（执行面板要逐步显示）。但多步流程——
+ * 简历的「解析 PDF → 再诊断」、面试的「多轮对话 → 再总结」——需要"等这一步跑完再决定
+ * 下一步"，回调式的 `useAgentRun.run()` 用起来别扭。这里是它的 await 版。
+ *
+ * 静态设计稿里 `Om.sseAsync` 承担同样的职责。失败时抛 ApiError，调用方 catch 后提示。
+ */
+export async function streamToResult<T>(
+  path: string,
+  body: unknown,
+  token: string,
+  onEvent?: (event: StreamEvent) => void,
+): Promise<T | null> {
+  let result: T | null = null;
+  for await (const event of stream(path, body, token)) {
+    onEvent?.(event);
+    if (event.type === "错误") {
+      const message = (event.payload as { message?: string })?.message;
+      throw new ApiError(message || "流式请求失败");
+    }
+    if (event.type === "结果") {
+      result = event.payload as T;
+    }
+  }
+  return result;
 }
 
 export const streamQuestion = (token: string, body: unknown) =>
@@ -414,6 +454,10 @@ export type AnswerItem = {
   id: number;
   question_id: number;
   question_content: string;
+  // 后端 /answers 联表顺带带出的题目元信息，列表页直接用，不必再查题
+  question_direction: string;
+  question_difficulty: string;
+  question_type: string;
   answer_content: string;
   score_json: {
     correctness?: DimensionScore;

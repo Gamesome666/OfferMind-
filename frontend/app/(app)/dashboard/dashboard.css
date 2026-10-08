@@ -1,0 +1,41 @@
+/* 工作台私有样式。原为 dashboard.html 的内联 <style>，选择器加 [data-page="dashboard"] 前缀。 */
+
+[data-page="dashboard"] .due-item {
+  display: grid; grid-template-columns: 3px minmax(0,1fr) auto; gap: 14px;
+  align-items: center; padding: 13px 16px; border-bottom: 1px solid var(--border);
+  transition: background .14s;
+}
+[data-page="dashboard"] .due-item:last-child { border-bottom: 0; }
+[data-page="dashboard"] .due-item:hover { background: var(--surface-2); }
+[data-page="dashboard"] .due-item .flag { width: 3px; height: 34px; border-radius: 2px; background: var(--border-strong); }
+[data-page="dashboard"] .due-item.overdue .flag { background: var(--danger); }
+[data-page="dashboard"] .due-item.today .flag { background: var(--warn); }
+[data-page="dashboard"] .due-item .q { font-size: 13.5px; line-height: 1.55; }
+[data-page="dashboard"] .due-item .meta { display: flex; align-items: center; gap: 8px; margin-top: 5px; }
+
+[data-page="dashboard"] .hist-item {
+  display: grid; grid-template-columns: 68px minmax(0,1fr) auto; gap: 12px;
+  align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--border);
+}
+[data-page="dashboard"] .hist-item:last-child { border-bottom: 0; }
+[data-page="dashboard"] .hist-item:hover { background: var(--surface-2); }
+[data-page="dashboard"] .hist-item .mod { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); letter-spacing: .06em; }
+[data-page="dashboard"] .hist-item .t { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-page="dashboard"] .hist-item time { font-size: 11px; color: var(--faint); }
+
+[data-page="dashboard"] .kp { display: grid; grid-template-columns: minmax(0,1fr) 46px; gap: 12px; align-items: center; padding: 9px 0; }
+[data-page="dashboard"] .kp + .kp { border-top: 1px solid var(--border); }
+[data-page="dashboard"] .kp .nm { font-size: 12.5px; margin-bottom: 5px; display: flex; justify-content: space-between; gap: 8px; }
+[data-page="dashboard"] .kp .nm b { font-family: var(--font-mono); font-weight: 500; color: var(--muted); font-size: 12px; }
+
+[data-page="dashboard"] .quick { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+[data-page="dashboard"] .quick a {
+  display: flex; flex-direction: column; gap: 6px; padding: 13px 14px;
+  border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface);
+  transition: border-color .14s, transform .12s;
+}
+[data-page="dashboard"] .quick a:hover { border-color: var(--accent-line); transform: translateY(-2px); }
+[data-page="dashboard"] .quick .ic { font-family: var(--font-mono); font-size: 15px; color: var(--muted); transition: color .14s; }
+[data-page="dashboard"] .quick a:hover .ic { color: var(--accent-ink); }
+[data-page="dashboard"] .quick .nm { font-size: 13px; font-weight: 540; }
+[data-page="dashboard"] .quick .ds { font-size: 11.5px; color: var(--muted); line-height: 1.5; }
