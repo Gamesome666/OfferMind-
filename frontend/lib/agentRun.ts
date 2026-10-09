@@ -68,11 +68,12 @@ export function useAgentRun(storageKey?: string) {
           continue;
         }
         onEvent?.(event);
-        const key = event.id ? `${seq}:${event.id}` : undefined;
-        const item: Trace = { ...event, id: key };
+        // runKey 用于合并（带运行序号），id 保持后端原值用于展示
+        const runKey = event.id ? `${seq}:${event.id}` : undefined;
+        const item: Trace = { ...event, runKey };
         setTraces((prev) => {
-          if (!key) return [...prev, item];
-          const index = prev.findIndex((trace) => trace.id === key);
+          if (!runKey) return [...prev, item];
+          const index = prev.findIndex((trace) => trace.runKey === runKey);
           if (index === -1) return [...prev, item];
           const next = prev.slice();
           next[index] = item;

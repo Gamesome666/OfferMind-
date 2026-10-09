@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/components/ToastProvider";
+import { usePageScope } from "@/lib/pageScope";
 
 import "./login.css";
 
@@ -17,6 +18,7 @@ const DEMO_PASSWORD = "admin123456";
 type Mode = "login" | "register";
 
 export default function LoginPage() {
+  usePageScope("login");
   const { user, ready, signIn, signUp } = useAuth();
   const toast = useToast();
   const router = useRouter();

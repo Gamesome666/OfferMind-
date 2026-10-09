@@ -62,10 +62,13 @@ def transform(css: str) -> str:
         if stripped.startswith("@media"):
             depth = line.count("{") - line.count("}")
             if depth == 0:
-                # 单行写法：`@media (…) { .a { … } }` —— 括号在行内已配平，
+                # 单行写法：`@media (…) { .a { … } .b { … } }` —— 括号在行内已配平。
                 # 直接拆出中间那段递归处理，不能再去后面找闭合行（会多吐一个 }）。
+                # 段内可能塞了**多条**规则，而 transform 是按行解析的，
+                # 所以先在每个 `}` 后补换行，把它们摊成独立行，否则只有第一条会被加前缀。
                 head, _, tail = line.partition("{")
                 inner_src, _, _close = tail.rpartition("}")
+                inner_src = inner_src.replace("}", "}\n")
                 out.append(head + "{" + transform(inner_src) + "}")
                 i += 1
                 continue

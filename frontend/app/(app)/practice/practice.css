@@ -1,0 +1,87 @@
+/* practice 页私有样式。提取自设计稿的内联 <style>，选择器统一加 [data-page="practice"] 前缀。
+   body/html 全局规则已剔除（tokens.css 提供）。 */
+
+[data-page="practice"] .cfgbar {
+    display: grid; grid-template-columns: repeat(3, minmax(0,1fr)) minmax(0,1.4fr) auto;
+    gap: 14px; align-items: end;
+  }
+  @media (max-width: 1180px) {[data-page="practice"] .cfgbar { grid-template-columns: repeat(2, minmax(0,1fr)); }
+ }
+  @media (max-width: 700px) {[data-page="practice"] .cfgbar { grid-template-columns: minmax(0,1fr); }
+ }
+
+[data-page="practice"] .side { position: sticky; top: 20px; display: grid; gap: 16px; }
+
+  /* 题干 */
+[data-page="practice"] .qhead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+[data-page="practice"] .qtext { font-size: 15.5px; line-height: 1.72; letter-spacing: -0.004em; }
+[data-page="practice"] .samples {
+    margin-top: 14px; background: var(--ink-bg); color: var(--ink-fg);
+    border-radius: var(--r-sm); padding: 12px 14px;
+    font-family: var(--font-mono); font-size: 12px; line-height: 1.7;
+    white-space: pre-wrap; overflow-x: auto;
+  }
+[data-page="practice"] .samples .lb {
+    display: block; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-muted); margin-bottom: 6px;
+  }
+[data-page="practice"] .kps { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+
+  /* 作答区 */
+[data-page="practice"] .answer-area { position: relative; }
+[data-page="practice"] .answer-area textarea { min-height: 190px; font-size: 13.5px; }
+[data-page="practice"] .count { position: absolute; right: 10px; bottom: 9px; font-family: var(--font-mono); font-size: 11px; color: var(--faint); pointer-events: none; }
+
+  /* 评分结果 */
+[data-page="practice"] .scorehead { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 22px; align-items: center; }
+[data-page="practice"] .bigscore {
+    display: grid; place-items: center; width: 118px; height: 118px; border-radius: 50%;
+    background: conic-gradient(var(--accent-ink) calc(var(--p) * 1%), var(--surface-3) 0);
+    position: relative; flex-shrink: 0;
+  }
+[data-page="practice"] .bigscore::after {
+    content: ""; position: absolute; inset: 8px; border-radius: 50%; background: var(--surface);
+  }
+[data-page="practice"] .bigscore .in { position: relative; text-align: center; line-height: 1; }
+[data-page="practice"] .bigscore .n { font-family: var(--font-mono); font-size: 32px; font-weight: 500; letter-spacing: -0.03em; }
+[data-page="practice"] .bigscore .d { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 3px; }
+[data-page="practice"] .verdict { font-size: 13.5px; line-height: 1.7; color: var(--fg-2); }
+[data-page="practice"] .verdict b { color: var(--fg); font-weight: 560; }
+
+[data-page="practice"] .two { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }
+  @media (max-width: 860px) {[data-page="practice"] .two { grid-template-columns: minmax(0,1fr); }
+ }
+[data-page="practice"] .note { border: 1px solid var(--border); border-radius: var(--r-sm); padding: 12px 14px; }
+[data-page="practice"] .note .t { font-size: 12px; font-weight: 600; margin-bottom: 7px; display: flex; align-items: center; gap: 7px; }
+[data-page="practice"] .note ul { display: grid; gap: 6px; }
+[data-page="practice"] .note li { font-size: 12.5px; line-height: 1.6; color: var(--fg-2); padding-left: 15px; position: relative; }
+[data-page="practice"] .note li::before { content: "—"; position: absolute; left: 0; color: var(--faint); }
+[data-page="practice"] .note.good { border-left: 2px solid var(--success); }
+[data-page="practice"] .note.bad { border-left: 2px solid var(--warn); }
+
+[data-page="practice"] details.ref { margin-top: 14px; border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden; }
+[data-page="practice"] details.ref summary {
+    padding: 10px 14px; font-size: 12.5px; font-weight: 540; cursor: pointer; background: var(--surface-2);
+    list-style: none; display: flex; align-items: center; justify-content: space-between;
+  }
+[data-page="practice"] details.ref summary::-webkit-details-marker { display: none; }
+[data-page="practice"] details.ref summary::after { content: "▾"; color: var(--muted); font-size: 11px; transition: transform .16s; }
+[data-page="practice"] details.ref[open] summary::after { transform: rotate(180deg); }
+[data-page="practice"] details.ref .bd { padding: 13px 14px; font-size: 13px; line-height: 1.72; color: var(--fg-2); border-top: 1px solid var(--border); }
+
+[data-page="practice"] .stage { display: flex; align-items: center; gap: 0; margin-bottom: 20px; }
+[data-page="practice"] .stage .st { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+[data-page="practice"] .stage .st .n {
+    width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center;
+    font-family: var(--font-mono); font-size: 10.5px; border: 1px solid var(--border-strong); background: var(--surface);
+  }
+[data-page="practice"] .stage .ln { flex: 1; height: 1px; background: var(--border); margin: 0 10px; min-width: 14px; }
+[data-page="practice"] .stage .st.on { color: var(--fg); }
+[data-page="practice"] .stage .st.on .n { border-color: var(--brand); background: var(--brand); color: #fff; }
+[data-page="practice"] .stage .st.done .n { border-color: var(--success); color: var(--success); }
+
+  /* 追问链 */
+[data-page="practice"] .fu { border-top: 1px solid var(--border); padding: 13px 16px; }
+[data-page="practice"] .fu:first-child { border-top: 0; }
+[data-page="practice"] .fu .qh { font-size: 13.5px; font-weight: 540; line-height: 1.6; }
+[data-page="practice"] .fu .kp { font-size: 12px; color: var(--muted); margin-top: 5px; }

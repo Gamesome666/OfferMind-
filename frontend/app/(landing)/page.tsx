@@ -12,6 +12,7 @@ import Link from "next/link";
 import { useEffect } from "react";
 
 import { initLanding } from "./landing";
+import { usePageScope } from "@/lib/pageScope";
 
 import "./landing.css";
 
@@ -21,6 +22,7 @@ function cssVars(vars: Record<string, string>): React.CSSProperties {
 }
 
 export default function LandingPage() {
+  usePageScope("landing");
   useEffect(() => {
     // 返回的清理函数会 abort 掉本次注册的所有监听器，并让离屏的 RAF 停掉
     return initLanding();

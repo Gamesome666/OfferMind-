@@ -10,7 +10,11 @@ const API = `${API_BASE}/api/v1`;
 export type User = { id: number; email: string; nickname: string; is_admin?: boolean };
 
 export type Trace = {
-  id?: string; // 步骤唯一标识；同名步骤的「进行中」与「已完成」共用一个 id
+  id?: string; // 步骤唯一标识（后端原值，用于展示）
+  // 合并用的键 = 运行序号 + id。同一页面上多次执行会跑同一个节点（如模拟面试的多轮
+  // 都会跑 interview_question），不加序号的话后一轮会把前一轮的轨迹覆盖掉。
+  // 与 `id` 分开是因为面板要显示干净的 `retrieve:向量化`，而不是 `2:retrieve:向量化`。
+  runKey?: string;
   type: string; // 检索 / 模型 / 工具 / 结果 / 错误
   status?: "running" | "done";
   payload: Record<string, unknown>;

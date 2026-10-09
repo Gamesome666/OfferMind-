@@ -65,7 +65,7 @@ export default function TracePanel({
           events.map((ev, index) => {
             const hot = (ev.duration_ms ?? 0) > 3000;
             return (
-              <div className={`trace-row ${rowClass(ev)}`} key={ev.id ?? `row-${index}`}>
+              <div className={`trace-row ${rowClass(ev)}`} key={ev.runKey ?? `row-${index}`}>
                 <div className="seq num">{String(index + 1).padStart(2, "0")}</div>
                 <div className={`kind ${ev.type}`}>{ev.type}</div>
                 <div className="what">

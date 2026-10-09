@@ -1,0 +1,62 @@
+/* wrongbook 页私有样式。提取自设计稿的内联 <style>，选择器统一加 [data-page="wrongbook"] 前缀。
+   body/html 全局规则已剔除（tokens.css 提供）。 */
+
+[data-page="wrongbook"] .filters { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+[data-page="wrongbook"] .toolbar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+
+[data-page="wrongbook"] .row-item {
+    display: grid; grid-template-columns: 40px minmax(0,1fr) 172px auto; gap: 16px;
+    align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--border);
+    transition: background .14s;
+  }
+[data-page="wrongbook"] .row-item:last-child { border-bottom: 0; }
+[data-page="wrongbook"] .row-item:hover { background: var(--surface-2); }
+  @media (max-width: 1080px) {[data-page="wrongbook"] .row-item { grid-template-columns: 40px minmax(0,1fr); }
+[data-page="wrongbook"] .row-item .sched, [data-page="wrongbook"] .row-item .acts { grid-column: 2; }
+ }
+
+[data-page="wrongbook"] .scorechip {
+    width: 40px; height: 40px; border-radius: var(--r-sm); display: grid; place-items: center;
+    font-family: var(--font-mono); font-size: 14px; font-weight: 520; flex-shrink: 0;
+  }
+[data-page="wrongbook"] .scorechip.s4 { background: var(--success-soft); color: oklch(38% 0.11 152); }
+[data-page="wrongbook"] .scorechip.s3 { background: var(--accent-soft); color: var(--accent-ink); }
+[data-page="wrongbook"] .scorechip.s2 { background: var(--warn-soft); color: oklch(44% 0.11 72); }
+[data-page="wrongbook"] .scorechip.s1 { background: var(--danger-soft); color: oklch(44% 0.16 25); }
+
+[data-page="wrongbook"] .row-item .q { font-size: 13.5px; line-height: 1.58; }
+[data-page="wrongbook"] .row-item .meta { display: flex; align-items: center; gap: 7px; margin-top: 6px; flex-wrap: wrap; }
+
+[data-page="wrongbook"] .sched { display: grid; gap: 5px; }
+[data-page="wrongbook"] .sched .due { font-family: var(--font-mono); font-size: 12px; display: flex; align-items: center; gap: 6px; }
+[data-page="wrongbook"] .sched .due.over { color: var(--danger); }
+[data-page="wrongbook"] .sched .bar-mini { height: 3px; background: var(--surface-3); border-radius: 2px; overflow: hidden; }
+[data-page="wrongbook"] .sched .bar-mini i { display: block; height: 100%; background: var(--accent-ink); }
+[data-page="wrongbook"] .sched .cap { font-family: var(--font-mono); font-size: 10.5px; color: var(--faint); }
+[data-page="wrongbook"] .acts { display: flex; gap: 6px; justify-content: flex-end; }
+
+  /* 复习弹层 */
+[data-page="wrongbook"] .rv-q { font-size: 14.5px; line-height: 1.7; }
+[data-page="wrongbook"] .rv-mine {
+    margin-top: 14px; padding: 12px 14px; background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: var(--r-sm);
+    font-size: 13px; line-height: 1.68; color: var(--fg-2); white-space: pre-wrap;
+  }
+[data-page="wrongbook"] .qbtns { display: grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap: 7px; margin-top: 8px; }
+[data-page="wrongbook"] .qbtn {
+    border: 1px solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface);
+    padding: 9px 4px; display: grid; gap: 3px; justify-items: center; transition: all .13s;
+  }
+[data-page="wrongbook"] .qbtn:hover { border-color: var(--accent); background: var(--accent-soft); }
+[data-page="wrongbook"] .qbtn .n { font-family: var(--font-mono); font-size: 15px; font-weight: 520; }
+[data-page="wrongbook"] .qbtn .l { font-size: 10px; color: var(--muted); }
+[data-page="wrongbook"] .qbtn[aria-pressed="true"] { border-color: var(--brand); background: var(--brand); }
+[data-page="wrongbook"] .qbtn[aria-pressed="true"] .n, [data-page="wrongbook"] .qbtn[aria-pressed="true"] .l { color: #fff; }
+[data-page="wrongbook"] .predict {
+    margin-top: 14px; padding: 12px 14px; border: 1px dashed var(--border-strong);
+    border-radius: var(--r-sm); background: var(--surface-2);
+    display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px;
+  }
+[data-page="wrongbook"] .predict .k { font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+[data-page="wrongbook"] .predict .v { font-family: var(--font-mono); font-size: 15px; margin-top: 3px; }
+[data-page="wrongbook"] .formula { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); line-height: 1.8; }

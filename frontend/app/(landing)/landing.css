@@ -35,7 +35,8 @@
 [data-page="landing"] .top.on-light nav a { color: var(--fg-2); }
 [data-page="landing"] .top.on-light nav a:hover { background: var(--surface-3); color: var(--fg); }
 [data-page="landing"] .top .spacer { margin-left: auto; }
-  @media (max-width: 980px) {[data-page="landing"] .top nav { display: none; } }
+  @media (max-width: 980px) {[data-page="landing"] .top nav { display: none; }
+ }
 
 [data-page="landing"] .pill-dark {
     display: inline-flex; align-items: center; gap: 7px;
@@ -170,7 +171,8 @@
     animation: travel 2.4s cubic-bezier(.6,0,.4,1) infinite;
   }
   @keyframes travel { 0% { transform: translateY(-100%); } 60%, 100% { transform: translateY(100%); } }
-  @media (prefers-reduced-motion: reduce) {[data-page="landing"] .cue .rail::after { animation: none; opacity: .5; } }
+  @media (prefers-reduced-motion: reduce) {[data-page="landing"] .cue .rail::after { animation: none; opacity: .5; }
+ }
 
   /* ============================================================
      正文
@@ -187,11 +189,13 @@
   /* 滚动入场 */
 [data-page="landing"] .rv { opacity: 0; transform: translateY(20px); transition: opacity .78s cubic-bezier(.16,.84,.28,1), transform .78s cubic-bezier(.16,.84,.28,1); transition-delay: var(--d, 0ms); }
 [data-page="landing"] .rv.in { opacity: 1; transform: none; }
-  @media (prefers-reduced-motion: reduce) {[data-page="landing"] .rv { opacity: 1; transform: none; transition: none; } }
+  @media (prefers-reduced-motion: reduce) {[data-page="landing"] .rv { opacity: 1; transform: none; transition: none; }
+ }
 
   /* ---------- 对照 ---------- */
 [data-page="landing"] .vs { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 18px; }
-  @media (max-width: 880px) {[data-page="landing"] .vs { grid-template-columns: minmax(0,1fr); } }
+  @media (max-width: 880px) {[data-page="landing"] .vs { grid-template-columns: minmax(0,1fr); }
+ }
 [data-page="landing"] .vs-card { border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); overflow: hidden; display: flex; flex-direction: column; }
 [data-page="landing"] .vs-card.dim { background: var(--surface-2); }
 [data-page="landing"] .vs-h { display: flex; align-items: center; gap: 9px; padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 560; }
@@ -201,7 +205,8 @@
 
 [data-page="landing"] .spin { width: 34px; height: 34px; border-radius: 50%; border: 2.5px solid var(--surface-3); border-top-color: var(--faint); animation: spin .9s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  @media (prefers-reduced-motion: reduce) {[data-page="landing"] .spin { animation: none; } }
+  @media (prefers-reduced-motion: reduce) {[data-page="landing"] .spin { animation: none; }
+ }
 [data-page="landing"] .dimline { width: 100%; max-width: 240px; height: 6px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
 [data-page="landing"] .dimline i { display: block; height: 100%; width: 42%; background: var(--border-strong); border-radius: 3px; }
 [data-page="landing"] .vs-card .cap2 { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
@@ -218,9 +223,11 @@
 
   /* ---------- 数据飞轮 ---------- */
 [data-page="landing"] .wheel-wrap { display: grid; grid-template-columns: 380px minmax(0,1fr); gap: 48px; align-items: center; }
-  @media (max-width: 980px) {[data-page="landing"] .wheel-wrap { grid-template-columns: minmax(0,1fr); gap: 30px; justify-items: center; } }
+  @media (max-width: 980px) {[data-page="landing"] .wheel-wrap { grid-template-columns: minmax(0,1fr); gap: 30px; justify-items: center; }
+ }
 [data-page="landing"] .ring { position: relative; width: 380px; height: 380px; flex-shrink: 0; }
-  @media (max-width: 520px) {[data-page="landing"] .ring { transform: scale(.82); } }
+  @media (max-width: 520px) {[data-page="landing"] .ring { transform: scale(.82); }
+ }
 [data-page="landing"] .ring svg { position: absolute; inset: 0; overflow: visible; }
 [data-page="landing"] .ring .arc { fill: none; stroke: var(--border); stroke-width: 1; }
   /* SVG 圆从 3 点钟起画，而节点从 12 点钟排起 —— 把弧转 -90° 对齐，
@@ -258,7 +265,8 @@
 
   /* ---------- 评分卡 ---------- */
 [data-page="landing"] .score-card { display: grid; grid-template-columns: 190px minmax(0,1fr); gap: 40px; padding: 30px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); }
-  @media (max-width: 860px) {[data-page="landing"] .score-card { grid-template-columns: minmax(0,1fr); gap: 26px; } }
+  @media (max-width: 860px) {[data-page="landing"] .score-card { grid-template-columns: minmax(0,1fr); gap: 26px; }
+ }
 [data-page="landing"] .total { display: grid; place-items: center; align-content: center; }
 [data-page="landing"] .gauge { position: relative; width: 148px; height: 148px; }
 [data-page="landing"] .gauge svg { transform: rotate(-90deg); }
@@ -271,7 +279,9 @@
 
 [data-page="landing"] .dim-rows { display: grid; gap: 17px; align-content: center; }
 [data-page="landing"] .dim-row { display: grid; grid-template-columns: 108px minmax(0,1fr) 44px; gap: 16px; align-items: start; }
-  @media (max-width: 620px) {[data-page="landing"] .dim-row { grid-template-columns: minmax(0,1fr); gap: 7px; } .dim-row .sc { text-align: left !important; } }
+  @media (max-width: 620px) {[data-page="landing"] .dim-row { grid-template-columns: minmax(0,1fr); gap: 7px; }
+[data-page="landing"] .dim-row .sc { text-align: left !important; }
+ }
 [data-page="landing"] .dim-row .nm { font-size: 13px; font-weight: 560; }
 [data-page="landing"] .dim-row .nm em { display: block; font-style: normal; font-family: var(--font-mono); font-size: 10px; color: var(--faint); letter-spacing: .05em; margin-top: 3px; }
 [data-page="landing"] .dim-row .bd { display: grid; gap: 7px; }

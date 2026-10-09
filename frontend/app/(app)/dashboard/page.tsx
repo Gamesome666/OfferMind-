@@ -20,6 +20,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { useHistory, MODULE_META } from "@/lib/history";
 import { greeting, hhmm, relDay, todayLabel } from "@/lib/format";
+import { usePageScope } from "@/lib/pageScope";
 
 import "./dashboard.css";
 
@@ -38,6 +39,7 @@ function toneOf(m: number): string {
 }
 
 export default function DashboardPage() {
+  usePageScope("dashboard");
   const { token, user } = useAuth();
   const toast = useToast();
   const { restore } = useHistory();
