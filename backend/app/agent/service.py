@@ -484,8 +484,9 @@ async def interview_chat_stream(
         turn=turn,
     ):
         if event["type"] == "hr_message":
+            # 不能 continue 掉：前端靠这条事件把「一整句说完」的 HR 气泡定稿
+            # （token 只是逐字分片，攒完之后气泡要靠它落下来）
             full_reply = event["payload"]["content"]
-            continue
         yield event
 
     if full_reply:
