@@ -10,6 +10,11 @@
 - body / html 规则        → 丢弃（tokens.css 已提供）
 
 用法：python scope_css.py <源 html> <页面名> <输出 css>
+
+⚠ 这个脚本重跑会整份覆盖输出文件，页面里手工修订过的部分会丢。
+  目前已知的手工修订：login.css 的 @keyframes slidein → login-slidein、
+  landing.css 的 rise → landing-rise（关键帧名不参与 [data-page] 作用域，
+  与 tokens.css 撞名会互相覆盖）。改这几页前先看一眼文件头的注释。
 """
 import re
 import sys
@@ -81,8 +86,10 @@ def transform(css: str) -> str:
                 if depth > 0:
                     inner.append(lines[i])
                 i += 1
-            out.append(transform("\n".join(inner)))
-            out.append("}")
+            inner_out = transform("\n".join(inner))
+            if inner_out.strip():
+                out.append(inner_out)
+                out.append("}")
             continue
 
         # —— 普通规则 ——
@@ -99,7 +106,11 @@ def transform(css: str) -> str:
             depth = rest.count("{") - rest.count("}")
             while depth > 0 and i < len(lines):
                 depth += lines[i].count("{") - lines[i].count("}")
-                out.append(lines[i])
+                # 整条规则被丢弃时（如 `html, body { … }`），规则体也要一并丢掉。
+                # 少了这个判断就会把属性行和收尾的 } 原样吐出去，产出非法 CSS
+                # —— 解析器只报「Unexpected }」，很难反查到是这里。
+                if pref:
+                    out.append(lines[i])
                 i += 1
             continue
 
