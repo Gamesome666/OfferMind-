@@ -9,7 +9,9 @@
  */
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+
+import { useSearchParams } from "next/navigation";
 
 import Modal from "@/components/Modal";
 import Seg from "@/components/Seg";
@@ -76,8 +78,19 @@ function sm2(rec: AnswerItem, quality: number) {
 }
 
 export default function WrongbookPage() {
+  // useSearchParams 必须包在 Suspense 里，否则 next build 报
+  // "useSearchParams() should be wrapped in a suspense boundary"
+  return (
+    <Suspense fallback={null}>
+      <WrongbookInner />
+    </Suspense>
+  );
+}
+
+function WrongbookInner() {
   const { token } = useAuth();
   const toast = useToast();
+  const searchParams = useSearchParams();
   // 把样式作用域挂到 body（弹层 portal 到 body，必须这样才在作用域内）
   usePageScope("wrongbook");
 
@@ -118,6 +131,18 @@ export default function WrongbookPage() {
   useEffect(() => {
     void load(tab);
   }, [load, tab]);
+
+  // 从工作台点「去复习」进来时，直接打开那一条的复习弹层。
+  // 只在首次拿到列表后应用一次，之后用户自己关掉不该再被弹回来。
+  const focusId = Number(searchParams.get("focus") ?? "") || null;
+  const focusApplied = useRef(false);
+  useEffect(() => {
+    if (!focusId || focusApplied.current || !rows.length) return;
+    const target = rows.find((r) => r.id === focusId);
+    if (!target) return;
+    focusApplied.current = true;
+    setReviewing(target);
+  }, [focusId, rows]);
 
   /** 单条记录变了之后，按归属规则就地更新列表（避免「统计说已毕业、列表还留着」）。 */
   function applyUpdated(updated: AnswerItem) {

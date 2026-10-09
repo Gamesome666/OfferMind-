@@ -6,7 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 OfferMind —— 可观测 Agentic RAG 驱动的 AI 求职面试训练平台。这是「大模型部署与微调」课程的课程设计 + 竞赛项目，面向计算机方向求职者，提供 AI 定向刷题评测、AI 简历优化、AI 模拟面试的一站式系统。
 
-**当前状态：后端 + 前端主链路已实现，尚未做端到端联调。** 技术方案与架构见下方文档。
+**当前状态：后端 + 前端全链路已实现并移植到 Next.js（13 个页面），`next build` 通过。**
+刷题 / 错题本 / 简历 / 面试 / 报告五条链路已用真数据端到端验证过；管理后台四页与数据大屏
+目前只过了构建与类型检查，浏览器实测待补。技术方案与架构见下方文档。
 
 ## 项目结构
 
@@ -26,27 +28,50 @@ backend/                    FastAPI + LangGraph 后端
 └── app/api/               sse.py（SSE 响应封装）+ v1/ health / auth / training
                             / resume / interview / report / history / admin
 
-frontend/                   Next.js 15 + React 19 + TypeScript
-├── app/(app)/              登录后的页面：首页 / practice / resume / interview
-│                           / report / admin(管理后台)
-├── app/login/              登录注册
-├── components/             AgentPanel（可观测执行面板）、Radar（能力雷达）
-│                           HistoryRail（历史记录侧栏）
-└── lib/                    api.ts（含 SSE 流式解析）、agentRun.ts（执行面板状态机）
-                            auth.tsx（认证上下文）、pageState.ts（跨路由状态保持）
-                            history.tsx（历史记录上下文）
+frontend/                   Next.js 15 + React 19 + TypeScript（无额外 UI 依赖）
+├── app/(landing)/          落地页 /（含 canvas 星图，不套外壳）
+├── app/login/              登录注册（不套外壳）
+├── app/(app)/              登录后外壳（Rail 侧栏 + 鉴权门）：
+│                           dashboard / practice / wrongbook / resume
+│                           / interview / report / admin{,/questions,/config,/api}
+├── app/bigscreen/          数据大屏（1920×1080 固定画布，不套外壳）
+├── components/             Rail（侧栏）、TracePanel（执行面板）、Radar / Rubric / Seg
+│                           / Modal / ToastProvider / ConfirmProvider
+├── lib/                    api.ts（含 SSE 流式解析）、agentRun.ts（执行面板状态机）
+│                           auth.tsx、pageState.ts（页面状态保持 + 历史恢复）
+│                           history.tsx、pageScope.ts、format.ts
+├── scripts/                scope_css.py（设计稿 CSS → 作用域 CSS）、extract_landing_js.py
+└── public/design/          原始静态设计稿（13 页 HTML），仅作视觉回退参考，不再对外服务
 ```
+
+### 样式作用域（改前端样式前必读）
+
+静态设计稿每页是独立文档，样式天然隔离；Next 客户端路由下 CSS 一旦加载就常驻，
+多页同名选择器（`.side` / `.card` / `.row-item`）会互相覆盖。
+
+- **解法**：每页内容包一层 `data-page="X"`，该页私有样式全部加 `[data-page="X"] ` 前缀。
+  页面 CSS 由 `scripts/scope_css.py <设计稿> <页面名> <输出>` 生成，JSX 里的类名一个字不改。
+- **弹层要挂到 body**：`Modal` 用 `createPortal` 渲染到 `<body>`，跑出了 `data-page` 包裹层。
+  所以页面还要调 `usePageScope("X")`（`lib/pageScope.ts`）把 `data-page` 镜像到 `body` 上，
+  否则弹层里的样式全部匹配不到。
+- **⚠ 这个脚本是整份覆盖**，页面 CSS 里手工修订过的部分会被冲掉。已知两处：
+  `login.css` 的 `@keyframes slidein → login-slidein`、`landing.css` 的 `rise → landing-rise`
+  —— 关键帧名**不参与** `[data-page]` 作用域，与 `tokens.css` 的同名 keyframes 会互相覆盖。
+  改这两页前先看文件头注释。
+- **不要用 CSS Modules**：设计稿里有 `.trace-row .kind.模型` 这类 CJK 类选择器，Modules 处理不了。
 
 ## 历史记录与页面状态保持
 
-**历史记录**：用户端侧栏（`components/HistoryRail.tsx`）按「今天/昨天/更早」列出每个模块的历史交互，
-点一条即把该次交互的快照灌回对应页面并跳转，不用重跑模型。
+**历史记录**：工作台（`app/(app)/dashboard/page.tsx` 的「最近交互」卡片）按时间列出每个模块的
+历史交互，点一条即把该次交互的快照灌回对应页面并跳转，不用重跑模型。
 
 - 数据模型 `HistoryRecord`：`(user_id, module, title, snapshot_json, session_id)`，
   `module` ∈ practice / resume / interview / report。`snapshot_json` 存恢复现场所需的**全部页面状态**。
 - **快照字段名必须与前端页面状态对象的字段名一致** —— 恢复时是整块覆盖，key 对不上就恢复不出来。
 - 写入口有两处：前端在拿到结果后 POST `/history`（刷题评分、简历诊断、训练报告）；
   面试是后端在「总结面试」时写入（因为会话与消息都在服务端）。
+  面试的 snapshot key 是后端定的（`sessionId` / `direction` / `messages` / `report` …），
+  改前端字段名时要同步改 `app/agent/service.py` 的 summarize 分支。
 - 接口：`POST /history`、`GET /history?module=`、`GET /history/{id}`、`DELETE /history/{id}`，
   全部强制 `user_id` 过滤；跨用户访问返回 **404**（不是 403，避免泄露记录是否存在）。
 
@@ -54,6 +79,15 @@ frontend/                   Next.js 15 + React 19 + TypeScript
 状态挂在模块级 Map 上并镜像到 `sessionStorage`。Next.js App Router 切路由会卸载页面组件、
 丢掉 `useState`，这个钩子保证「切走再回来内容还在」，刷新也不丢（仅当前标签页）。
 `useAgentRun(key)` 也接了同一套，所以执行面板的轨迹一起保留。
+
+**历史恢复靠 `useSnapshot(key, snapshot, apply)`**（同文件的钩子，页面自己的 useState 仍照常写）：
+它把零散 state 组装成的快照与页面状态 key 双向绑定 —— 挂载时若有快照就灌一次、页面内状态变化时写回。
+两个坑：
+
+- `snapshot` 必须 `useMemo` 出来。否则每次渲染都写一次 sessionStorage，面试页按 token 流式渲染时
+  会变成每个 token 写一次。
+- 挂载后**必须跳过第一轮回写**。顺序是「① 灌快照 → ② 回写效应把尚未更新的初始快照写回同一个 key」，
+  而 React StrictMode 开发模式下会挂载两次，第二次读到的就是 ② 写坏的空快照，恢复出来的现场又被清空。
 
 ## 模拟面试（一问一答对话）
 
@@ -214,11 +248,12 @@ frontend/                   Next.js 15 + React 19 + TypeScript
 | M5 简历解析 + 诊断 | PDF 解析、JD 匹配、优化建议 | 已完成 |
 | M6 模拟面试 | 基于简历深挖提问、实时评分、面试报告 | 已完成 |
 | M7 训练报告 + 能力画像 | 报告生成、画像更新、雷达数据 | 已完成 |
-| F1 前端 | Next.js 页面 + AgentPanel + Radar | 已完成 |
-| M8 历史记录 + 页面状态保持 | HistoryRecord、历史侧栏、usePageState 跨路由保状态 | 已完成 |
+| F1 前端 | 设计稿重写进 Next.js 15（13 页）+ Rail / TracePanel / Radar 等组件 | 已完成 |
+| M8 历史记录 + 页面状态保持 | HistoryRecord、工作台历史卡片、usePageState / useSnapshot 跨路由保状态 | 已完成 |
 | M9 问答式模拟面试 | 一问一答对话、HR 按 token 流式、总结出评价与建议 | 已完成 |
-| M10 管理后台 | 用户管理、题库增删改查（同步向量库）、模型与检索配置 | 已完成 |
-| E1 端到端联调 | 起基础设施、建表、题库入库、全链路验证 | 进行中 |
+| M10 管理后台 | 用户管理、题库增删改查（同步向量库）、模型与检索配置、接口调试台 | 已完成 |
+| F2 数据大屏 | /bigscreen 1920×1080 固定画布，答辩演示用作战室 | 已完成 |
+| E1 端到端联调 | 起基础设施、建表、题库入库、全链路验证 | 进行中（五条业务链路已验证，管理端与大屏待实测） |
 
 ## 待完善规划（P0 / P1 / P2）
 
@@ -320,7 +355,7 @@ PRD 规划的第三个知识库（题库库 / 面经企业库 / 用户简历库�
 - **手写 JSON ReAct，不用 `bind_tools`**：DeepSeek 工具调用的 arguments 不保证合法 JSON
   （项目已知坑），而 `create_question` 恰好要传长文本。改成模型每轮输出 `json_object`
   `{thinking, tool, arguments, reply}`，服务端执行工具后把结果塞回对话再问一轮，
-  `tool: null` 即结束。每轮推 step event，接 AgentPanel。
+  `tool: null` 即结束。每轮推 step event，接 `<TracePanel>`。
 - **写操作走「拟→批→行」闸门**：写工具必须先出影响面预览（工具 `preview`），
   前端渲染确认卡片；服务端固化 `(工具名, 参数, plan_id)`，确认带回 plan_id 才执行且只能执行一次
   —— 确认时不让模型重新生成参数（类比 sudo：授权的是那一次具体操作）。
