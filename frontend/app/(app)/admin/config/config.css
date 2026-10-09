@@ -1,0 +1,67 @@
+/* config 页私有样式。提取自设计稿的内联 <style>，选择器统一加 [data-page="config"] 前缀。
+   body/html 全局规则已剔除（tokens.css 提供）。 */
+
+[data-page="config"] .side { position: sticky; top: 20px; display: grid; gap: 16px; }
+
+[data-page="config"] .cfgrow {
+    display: grid; grid-template-columns: minmax(0,1fr) minmax(280px, 400px);
+    gap: 22px; padding: 16px; border-bottom: 1px solid var(--border);
+  }
+[data-page="config"] .cfgrow:last-child { border-bottom: 0; }
+  @media (max-width: 1000px) {[data-page="config"] .cfgrow { grid-template-columns: minmax(0,1fr); }
+ }
+[data-page="config"] .cfgrow .lb { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 560; }
+[data-page="config"] .cfgrow .key { font-family: var(--font-mono); font-size: 10.5px; color: var(--faint); margin-top: 3px; }
+[data-page="config"] .cfgrow .ds { font-size: 12.5px; line-height: 1.62; color: var(--muted); margin-top: 7px; max-width: 62ch; }
+[data-page="config"] .cfgrow .ctl { display: grid; gap: 7px; align-content: start; }
+[data-page="config"] .cfgrow .meta { display: flex; align-items: center; gap: 10px; font-size: 11.5px; color: var(--muted); }
+[data-page="config"] .cfgrow .meta code { font-size: 11px; }
+[data-page="config"] .cfgrow.changed { background: var(--accent-soft); }
+
+[data-page="config"] .grouphead {
+    display: flex; align-items: center; gap: 10px; padding: 13px 16px;
+    background: var(--surface-2); border-bottom: 1px solid var(--border);
+  }
+[data-page="config"] .grouphead .ic {
+    width: 24px; height: 24px; border-radius: var(--r-xs); display: grid; place-items: center;
+    background: var(--brand-soft); color: var(--brand); font-family: var(--font-mono); font-size: 12px;
+  }
+[data-page="config"] .grouphead .t { font-size: 13px; font-weight: 600; }
+[data-page="config"] .grouphead .d { font-size: 11.5px; color: var(--muted); }
+
+  /* 网关拓扑 */
+[data-page="config"] .topo { display: grid; gap: 0; }
+[data-page="config"] .node {
+    display: grid; grid-template-columns: 10px minmax(0,1fr) auto; gap: 12px; align-items: center;
+    padding: 11px 13px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface);
+  }
+[data-page="config"] .node.primary { border-color: var(--accent-line); background: var(--accent-soft); }
+[data-page="config"] .node .nm { font-family: var(--font-mono); font-size: 12.5px; font-weight: 520; }
+[data-page="config"] .node .md { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); margin-top: 3px; }
+[data-page="config"] .link { display: grid; place-items: center; padding: 3px 0; }
+[data-page="config"] .link svg { overflow: visible; }
+[data-page="config"] .fblabel {
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em;
+    color: oklch(44% 0.11 72); background: var(--warn-soft); border-radius: var(--r-xs); padding: 1px 6px;
+  }
+
+  /* 基准表 */
+[data-page="config"] .bench { display: grid; gap: 0; }
+[data-page="config"] .bench .r {
+    display: grid; grid-template-columns: minmax(0,1fr) repeat(3, 62px);
+    gap: 10px; align-items: center; padding: 9px 14px; border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono); font-size: 12px;
+  }
+[data-page="config"] .bench .r:last-child { border-bottom: 0; }
+[data-page="config"] .bench .r.h { background: var(--surface-2); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+[data-page="config"] .bench .r span:not(:first-child) { text-align: right; }
+[data-page="config"] .bench .r.best { background: var(--accent-soft); }
+
+[data-page="config"] .preset {
+    display: grid; gap: 4px; padding: 9px 11px; border: 1px solid var(--border);
+    border-radius: var(--r-sm); cursor: pointer; transition: border-color .13s, background .13s;
+  }
+[data-page="config"] .preset:hover { border-color: var(--accent); background: var(--accent-soft); }
+[data-page="config"] .preset .t { font-size: 12.5px; font-weight: 540; }
+[data-page="config"] .preset .u { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); }
+[data-page="config"] .preset .nt { font-size: 11px; color: var(--faint); line-height: 1.5; }

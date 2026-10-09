@@ -2,7 +2,7 @@
 
 // 直连后端，不走 next.config 的 rewrites 代理：Next 的 rewrite 会把整个 SSE 响应缓冲到
 // 请求结束才交给浏览器，执行面板就拿不到「进行中」的分步事件。跨域由后端 CORSMiddleware 放行。
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8000";
+export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8000";
 const API = `${API_BASE}/api/v1`;
 
 /* ---------- 类型 ---------- */
@@ -375,7 +375,7 @@ export type ConfigItem = {
   has_value: boolean;
   overridden: boolean;
   description: string;
-  kind: "text" | "select" | "bool" | "number" | "secret";
+  kind: "text" | "select" | "bool" | "number" | "secret" | "textarea";
   options: string[];
 };
 
@@ -395,7 +395,14 @@ export type LlmOptions = {
 };
 
 export function adminStats(token: string) {
-  return request<{ users: number; questions: number }>("/admin/stats", {}, token);
+  // /admin/stats 把概览卡片与方向分布一次给全，前端不必为分布图再拉题库
+  return request<{
+    users: number;
+    questions: number;
+    admins: number;
+    new_users_7d: number;
+    directions: Record<string, number>;
+  }>("/admin/stats", {}, token);
 }
 
 export function adminListUsers(token: string, keyword = "") {

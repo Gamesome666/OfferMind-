@@ -1,0 +1,32 @@
+/* questions 页私有样式。提取自设计稿的内联 <style>，选择器统一加 [data-page="questions"] 前缀。
+   body/html 全局规则已剔除（tokens.css 提供）。 */
+
+[data-page="questions"] .toolbar { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+[data-page="questions"] .search { position: relative; }
+[data-page="questions"] .search .input { width: 240px; padding-left: 30px; }
+[data-page="questions"] .search::before { content: "⌕"; position: absolute; left: 10px; top: 7px; color: var(--faint); font-size: 14px; }
+[data-page="questions"] .content-cell { max-width: 460px; font-size: 13px; line-height: 1.55; }
+[data-page="questions"] .pager { display: flex; align-items: center; gap: 10px; }
+[data-page="questions"] .pager .p { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+
+[data-page="questions"] .sync { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 10.5px; }
+[data-page="questions"] .sync .dot { width: 6px; height: 6px; }
+
+[data-page="questions"] .qprev {
+    border: 1px solid var(--border); border-radius: var(--r-sm); padding: 12px 14px;
+    background: var(--surface-2); font-size: 13px; line-height: 1.65;
+  }
+[data-page="questions"] .qprev + .qprev { margin-top: 10px; }
+[data-page="questions"] .qprev .lb { font-family: var(--font-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+
+[data-page="questions"] .warnbox {
+    display: flex; gap: 10px; padding: 11px 13px; border-radius: var(--r-sm);
+    background: var(--warn-soft); border: 1px solid oklch(68% 0.15 72 / 0.32);
+    font-size: 12.5px; line-height: 1.6; color: oklch(42% 0.11 72);
+  }
+[data-page="questions"] .syncbar {
+    display: grid; gap: 9px; padding: 13px 14px; border: 1px solid var(--border);
+    border-radius: var(--r-sm); background: var(--surface-2);
+  }
+[data-page="questions"] .syncbar .line { display: grid; grid-template-columns: 92px 14px minmax(0,1fr); gap: 10px; align-items: center; font-family: var(--font-mono); font-size: 11.5px; }
+[data-page="questions"] .syncbar .line .k { color: var(--muted); }
