@@ -9,7 +9,7 @@
  */
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import Rubric from "@/components/Rubric";
 import Seg from "@/components/Seg";
@@ -30,6 +30,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { useHistory } from "@/lib/history";
 import { usePageScope } from "@/lib/pageScope";
+import { useSnapshot } from "@/lib/pageState";
 
 import "./practice.css";
 
@@ -81,6 +82,25 @@ export default function PracticePage() {
   const [config, setConfig] = useState<ConfigItem[]>([]);
   const [traceTitle, setTraceTitle] = useState("等待执行");
   const [live, setLive] = useState<LiveState>("idle");
+
+  // 历史恢复用的快照。字段名与上面 recordHistory() 写出去的六个 key 一一对应
+  const snapshot = useMemo(
+    () => ({ question, answer, grade, direction, difficulty, type }),
+    [question, answer, grade, direction, difficulty, type],
+  );
+
+  useSnapshot<typeof snapshot>("practice", snapshot, (stored) => {
+    setQuestion(stored.question);
+    setAnswer(stored.answer);
+    setGrade(stored.grade);
+    setDirection(stored.direction);
+    setDifficulty(stored.difficulty);
+    setType(stored.type);
+    // 恢复出来的是「已评分」的现场，不该再挂着上一轮的追问与落库标记
+    setSaved(null);
+    setFollowups([]);
+    setDupInfo({ hit: false, score: null });
+  });
 
   // 本轮上下文面板：读运行时配置（管理员在后台改完，这里就是新值）
   useEffect(() => {
@@ -145,6 +165,10 @@ export default function PracticePage() {
     setTraceTitle("training/grade/stream");
     setLive("running");
 
+    // 快照里的 grade 必须是本次的评分结果，不能读闭包里的 `grade` ——
+    // 那是 handleGrade 被调用那一刻的值（首次评分是 null，重评是上一次的分）。
+    // run() 收到「结果」时会同步回调，而「已记录」在其后，所以这里已经拿到了。
+    let graded: GradeOutput | null = null;
     await run<GradeOutput>(
       // question_id 必须回传：后端据此把作答挂到题上。缺失则不落库 ——
       // 宁可不记录，也不要挂到错的题上。
@@ -153,7 +177,10 @@ export default function PracticePage() {
         answer,
         question_id: question.question_id,
       }),
-      (result) => setGrade(result),
+      (result) => {
+        graded = result;
+        setGrade(result);
+      },
       {
         onEvent: (ev) => {
           if (ev.type !== "已记录") return;
@@ -163,7 +190,7 @@ export default function PracticePage() {
           void recordHistory(
             "practice",
             `${direction}·${difficulty}｜${questionText.slice(0, 28)}`,
-            { question, answer, grade, direction, difficulty, type },
+            { question, answer, grade: graded ?? grade, direction, difficulty, type },
           );
         },
       },

@@ -1,0 +1,60 @@
+/* resume 页私有样式。提取自设计稿的内联 <style>，选择器统一加 [data-page="resume"] 前缀。
+   body/html 全局规则已剔除（tokens.css 提供）。 */
+
+[data-page="resume"] .side { position: sticky; top: 20px; display: grid; gap: 16px; }
+[data-page="resume"] .steps { display: grid; gap: 0; }
+[data-page="resume"] .step { display: grid; grid-template-columns: 26px minmax(0,1fr); gap: 13px; padding-bottom: 20px; position: relative; }
+[data-page="resume"] .step:last-child { padding-bottom: 0; }
+[data-page="resume"] .step::before {
+    content: ""; position: absolute; left: 12px; top: 26px; bottom: 0; width: 1px; background: var(--border);
+  }
+[data-page="resume"] .step:last-child::before { display: none; }
+[data-page="resume"] .step .n {
+    width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+    font-family: var(--font-mono); font-size: 11px; background: var(--surface-3);
+    color: var(--muted); border: 1px solid var(--border-strong); z-index: 1;
+  }
+[data-page="resume"] .step.on .n { background: var(--brand); border-color: var(--brand); color: #fff; }
+[data-page="resume"] .step.done .n { background: var(--success-soft); border-color: var(--success); color: var(--success); }
+
+[data-page="resume"] .filechip {
+    display: flex; align-items: center; gap: 11px; padding: 11px 13px; margin-top: 12px;
+    border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface);
+  }
+[data-page="resume"] .filechip .ic {
+    width: 32px; height: 32px; border-radius: var(--r-xs); background: var(--danger-soft);
+    color: var(--danger); display: grid; place-items: center;
+    font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+  }
+[data-page="resume"] .filechip .nm { font-size: 13px; font-weight: 520; }
+[data-page="resume"] .filechip .sz { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+
+  /* 匹配度 */
+[data-page="resume"] .match { display: grid; grid-template-columns: 168px minmax(0,1fr); gap: 26px; align-items: center; }
+  @media (max-width: 760px) {[data-page="resume"] .match { grid-template-columns: minmax(0,1fr); }
+ }
+[data-page="resume"] .gauge { position: relative; width: 168px; height: 168px; }
+[data-page="resume"] .gauge .txt { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+[data-page="resume"] .gauge .n { font-family: var(--font-mono); font-size: 40px; font-weight: 500; letter-spacing: -0.035em; line-height: 1; }
+[data-page="resume"] .gauge .d { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 5px; }
+
+[data-page="resume"] .skillgrid { display: grid; gap: 9px; }
+[data-page="resume"] .skill { display: flex; align-items: center; gap: 9px; font-size: 13px; }
+[data-page="resume"] .skill .tick { width: 15px; height: 15px; border-radius: var(--r-xs); display: grid; place-items: center; font-size: 10px; flex-shrink: 0; }
+[data-page="resume"] .skill.have .tick { background: var(--success-soft); color: var(--success); }
+[data-page="resume"] .skill.miss .tick { background: var(--danger-soft); color: var(--danger); }
+[data-page="resume"] .skill.miss { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--border-strong); }
+
+[data-page="resume"] .sug { display: grid; gap: 10px; counter-reset: s; }
+[data-page="resume"] .sug li { display: grid; grid-template-columns: 22px minmax(0,1fr); gap: 10px; font-size: 13px; line-height: 1.65; color: var(--fg-2); }
+[data-page="resume"] .sug li::before {
+    counter-increment: s; content: counter(s, decimal-leading-zero);
+    font-family: var(--font-mono); font-size: 10.5px; color: var(--accent-ink);
+    background: var(--accent-soft); border-radius: var(--r-xs);
+    height: 20px; display: grid; place-items: center;
+  }
+[data-page="resume"] .stackline { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+[data-page="resume"] .proj { border: 1px solid var(--border); border-radius: var(--r-sm); padding: 11px 13px; }
+[data-page="resume"] .proj + .proj { margin-top: 9px; }
+[data-page="resume"] .proj .nm { font-size: 13px; font-weight: 560; }
+[data-page="resume"] .proj .ds { font-size: 12.5px; color: var(--fg-2); line-height: 1.62; margin-top: 4px; }

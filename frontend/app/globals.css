@@ -529,6 +529,40 @@ samp {
   border-color: var(--border);
   color: var(--fg);
 }
+/* 行内提示条。设计稿的静态页面没有「请求失败」这种横幅，但真实链路的每个页面都需要，
+   所以按 .notes 的视觉语言补一个：左侧一条语义色竖线 + 极浅底，与卡片同圆角。 */
+.alert {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  padding: 10px 13px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--fg-2);
+}
+.alert-bad {
+  border-color: var(--danger-soft);
+  border-left-color: var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.alert-warn {
+  border-color: var(--warn-soft);
+  border-left-color: var(--warn);
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.alert-ok {
+  border-color: var(--success-soft);
+  border-left-color: var(--success);
+  background: var(--success-soft);
+  color: var(--success);
+}
+
 .btn-danger {
   border-color: var(--danger);
   color: var(--danger);

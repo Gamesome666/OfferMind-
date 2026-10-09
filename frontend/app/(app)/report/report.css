@@ -1,0 +1,48 @@
+/* report 页私有样式。提取自设计稿的内联 <style>，选择器统一加 [data-page="report"] 前缀。
+   body/html 全局规则已剔除（tokens.css 提供）。 */
+
+[data-page="report"] .side { position: sticky; top: 20px; display: grid; gap: 16px; }
+[data-page="report"] .rep-hero { display: grid; grid-template-columns: 216px minmax(0,1fr); gap: 26px; align-items: center; }
+  @media (max-width: 820px) {[data-page="report"] .rep-hero { grid-template-columns: minmax(0,1fr); }
+ }
+[data-page="report"] .verdict { font-size: 14px; line-height: 1.72; color: var(--fg-2); }
+[data-page="report"] .verdict b { color: var(--fg); font-weight: 560; }
+
+[data-page="report"] .kp-row {
+    display: grid; grid-template-columns: minmax(0,1fr) 88px 96px; gap: 14px; align-items: center;
+    padding: 11px 16px; border-bottom: 1px solid var(--border);
+  }
+[data-page="report"] .kp-row:last-child { border-bottom: 0; }
+[data-page="report"] .kp-row:hover { background: var(--surface-2); }
+[data-page="report"] .kp-row .nm { font-size: 13px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+[data-page="report"] .kp-row .pct { font-family: var(--font-mono); font-size: 13px; text-align: right; }
+[data-page="report"] .kp-row .dims { display: flex; gap: 4px; justify-content: flex-end; }
+[data-page="report"] .kp-row .dims span {
+    font-family: var(--font-mono); font-size: 10.5px; padding: 1px 5px;
+    border-radius: var(--r-xs); background: var(--surface-3); color: var(--fg-2);
+  }
+
+[data-page="report"] .srcpick { display: grid; gap: 8px; }
+[data-page="report"] .src {
+    display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 10px; align-items: center;
+    padding: 11px 13px; border: 1px solid var(--border); border-radius: var(--r-sm);
+    background: var(--surface); cursor: pointer; transition: border-color .13s, background .13s;
+  }
+[data-page="report"] .src:hover { border-color: var(--border-strong); }
+[data-page="report"] .src.on { border-color: var(--accent); background: var(--accent-soft); }
+[data-page="report"] .src .t { font-size: 12.5px; line-height: 1.5; }
+[data-page="report"] .src .m { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); margin-top: 3px; }
+
+[data-page="report"] .notes { display: grid; gap: 10px; }
+[data-page="report"] .notes li { display: grid; grid-template-columns: 20px minmax(0,1fr); gap: 10px; font-size: 13px; line-height: 1.65; color: var(--fg-2); }
+[data-page="report"] .notes li .b {
+    width: 20px; height: 20px; border-radius: var(--r-xs); display: grid; place-items: center;
+    font-family: var(--font-mono); font-size: 10px;
+  }
+[data-page="report"] .notes.bad li .b { background: var(--warn-soft); color: oklch(44% 0.11 72); }
+[data-page="report"] .notes.good li .b { background: var(--success-soft); color: var(--success); }
+
+[data-page="report"] .kv { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+[data-page="report"] .kv .cell { border: 1px solid var(--border); border-radius: var(--r-sm); padding: 10px 12px; }
+[data-page="report"] .kv .cell .k { font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+[data-page="report"] .kv .cell .v { font-family: var(--font-mono); font-size: 18px; margin-top: 4px; letter-spacing: -0.02em; }

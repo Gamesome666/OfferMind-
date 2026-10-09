@@ -330,6 +330,20 @@ export function getSession(token: string, id: number) {
   return request<SessionOut>(`/interview/sessions/${id}`, {}, token);
 }
 
+/** 会话列表项：后端已联表带出轮数与总分，列表卡片不用再逐场查。 */
+export type SessionBrief = {
+  id: number;
+  status: string;
+  config: { direction?: string; difficulty?: string; style?: string };
+  updated_at: string;
+  rounds: number;
+  total_score: number | null;
+};
+
+export function listSessions(token: string) {
+  return request<SessionBrief[]>("/interview/sessions", {}, token);
+}
+
 /* ---------- 管理员后台 ---------- */
 
 export type AdminUser = {
