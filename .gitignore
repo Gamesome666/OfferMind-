@@ -32,6 +32,9 @@ backend/benchmark/
 .playwright-mcp/
 .claude/settings.local.json
 
+# Office 临时锁文件（~$ 开头）
+~$*
+
 # TS 增量构建产物
 frontend/tsconfig.tsbuildinfo
 
